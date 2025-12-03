@@ -1,7 +1,7 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser, Target } from 'puppeteer';
 
 export async function getPortfolioPdf(portfolioName: string): Promise<string | null> {
-    let browser;
+    let browser: Browser | undefined;
     try {
         console.log(`[PDF Scraper] Launching browser for ${portfolioName}...`);
         browser = await puppeteer.launch({
@@ -42,14 +42,24 @@ export async function getPortfolioPdf(portfolioName: string): Promise<string | n
         // Wait for dropdown to be visible
         await page.waitForSelector('#customDate', { visible: true, timeout: 5000 });
 
-        // Select first option (Noviembre/Latest)
-        // We need to make sure options are loaded. Sometimes it takes a moment.
-        // Let's just select value "0" which usually corresponds to the first item.
-        await page.select('#customDate', '0');
+        // Select first option (Latest available month)
+        // We dynamically get the value of the first option to ensure we always pick the latest.
+        const firstOptionValue = await page.evaluate(() => {
+            const select = document.querySelector('#customDate') as HTMLSelectElement;
+            return select?.options[0]?.value;
+        });
+
+        if (firstOptionValue) {
+            console.log(`[PDF Scraper] Selecting first option (value: ${firstOptionValue})...`);
+            await page.select('#customDate', firstOptionValue);
+        } else {
+            console.warn('[PDF Scraper] No options found in dropdown. Trying default "0".');
+            await page.select('#customDate', '0');
+        }
 
         // Setup listener for new target (the PDF tab)
-        const newTargetPromise = new Promise<any>(resolve => {
-            browser.once('targetcreated', target => resolve(target));
+        const newTargetPromise = new Promise<Target>(resolve => {
+            browser!.once('targetcreated', (target: Target) => resolve(target));
         });
 
         console.log('[PDF Scraper] Clicking PDF button...');
