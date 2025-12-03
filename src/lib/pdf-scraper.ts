@@ -39,36 +39,9 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
         console.log(`[PDF Scraper] Found row ${rowId}. Expanding...`);
         await page.click(`#${rowId}`);
 
-        // Wait for dropdown to be visible
-        await page.waitForSelector('#customDate', { visible: true, timeout: 10000 });
-
-        // Wait for options to populate
-        await page.waitForFunction(() => {
-            const select = document.querySelector('#customDate') as HTMLSelectElement;
-            return select && select.options.length > 0;
-        }, { timeout: 5000 });
-
-        // Select first valid option (Latest available month, skipping empty placeholder)
-        const firstOptionValue = await page.evaluate(() => {
-            const select = document.querySelector('#customDate') as HTMLSelectElement;
-            if (!select) return null;
-
-            // Iterate through options to find the first one with a non-empty value
-            for (const option of Array.from(select.options)) {
-                if (option.value && option.value.trim() !== "") {
-                    return option.value;
-                }
-            }
-            return null;
-        });
-
-        if (firstOptionValue) {
-            console.log(`[PDF Scraper] Selecting first valid option (value: ${firstOptionValue})...`);
-            await page.select('#customDate', firstOptionValue);
-        } else {
-            console.warn('[PDF Scraper] No valid options found in dropdown. Trying default "0".');
-            await page.select('#customDate', '0');
-        }
+        // Hardcoded period as requested by user
+        const period = '1';
+        console.log(`[PDF Scraper] Using hardcoded period: ${period}`);
 
         // Extract hidden values to construct the URL manually
         // This bypasses the need to click the button and handle window.open
@@ -76,20 +49,19 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
             const origin = (document.querySelector('#origin') as HTMLInputElement)?.value;
             const idPortfolio = (document.querySelector('#idPortfolio') as HTMLInputElement)?.value;
             const idProduct = (document.querySelector('#idProduct') as HTMLInputElement)?.value;
-            const period = (document.querySelector('#customDate') as HTMLSelectElement)?.value;
-            return { origin, idPortfolio, idProduct, period };
+            return { origin, idPortfolio, idProduct };
         });
 
         console.log('[PDF Scraper] Extracted params:', params);
 
-        if (!params.origin || !params.idPortfolio || !params.idProduct || !params.period) {
+        if (!params.origin || !params.idPortfolio || !params.idProduct) {
             console.error('[PDF Scraper] Missing required parameters for PDF URL construction.');
             return { pdfBase64: null, pdfUrl: null };
         }
 
         // Construct the Security.aspx URL
         // https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx?Origen=...
-        const securityUrl = `https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx?Origen=${params.origin}&Period=${params.period}&IdVariable=${params.idPortfolio}&Product=${params.idProduct}`;
+        const securityUrl = `https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx?Origen=${params.origin}&Period=${period}&IdVariable=${params.idPortfolio}&Product=${params.idProduct}`;
 
         console.log(`[PDF Scraper] Navigating to Security URL: ${securityUrl}`);
 
