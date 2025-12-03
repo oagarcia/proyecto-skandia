@@ -64,7 +64,13 @@ export async function POST(request: Request) {
       ## 4. Composición y Estrategia
       (Extrae esto del PDF si está disponible). ¿En qué invierte?
 
-      ## 5. Veredicto
+      ## 5. Análisis de Noticias y Sentimiento (Tiempo Real)
+      Identifica las principales posiciones en el PDF (ej. acciones, fondos, emisores).
+      Usa Google Search para buscar noticias financieras RECIENTES (de hoy o esta semana) sobre estas inversiones específicas.
+      Analiza cómo estas noticias podrían afectar el desempeño del portafolio a corto plazo.
+      Cita las fuentes si es posible.
+
+      ## 6. Veredicto
       Recomendación de Compra, Mantener o Venta para un inversor a largo plazo.
       
       Usa viñetas para los detalles y mantén un tono profesional.
@@ -88,7 +94,11 @@ export async function POST(request: Request) {
         for (const modelName of modelsToTry) {
             try {
                 console.log(`Attempting to generate with model: ${modelName}`);
-                const model = genAI.getGenerativeModel({ model: modelName });
+                // Enable Google Search Grounding
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    tools: [{ googleSearch: {} }]
+                } as any);
 
                 const result = await model.generateContent(parts);
                 const response = await result.response;
