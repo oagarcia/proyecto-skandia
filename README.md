@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Skandia Intelligence App
 
-## Getting Started
+Esta aplicación permite monitorear en tiempo real los portafolios de inversión de Skandia, analizar sus rentabilidades y recibir recomendaciones basadas en el desempeño histórico.
 
-First, run the development server:
+## Características
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Monitoreo en Tiempo Real**: Extrae datos actualizados directamente del portal de Skandia.
+- **Análisis de Rentabilidad**: Visualiza el rendimiento diario, mensual, semestral y anual.
+- **Recomendaciones Inteligentes**: Sugiere los mejores portafolios basándose en el retorno anual (YTD).
+- **Filtrado Avanzado**: Filtra por Tipo de Inversión (Renta Variable, Renta Fija, etc.) y Perfil de Riesgo.
+- **Interfaz Premium**: Diseño moderno y responsivo.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tecnologías
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Next.js 15**: Framework de React.
+- **Puppeteer**: Para la extracción de datos (Scraping).
+- **Tailwind CSS v4**: Estilos modernos.
+- **Framer Motion**: Animaciones fluidas.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Instrucciones de Uso
 
-## Learn More
+1.  Instalar dependencias:
+    ```bash
+    npm install
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+2.  Iniciar el servidor de desarrollo:
+    ```bash
+    npm run dev
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3.  Abrir `http://localhost:3000` (o el puerto que indique la consola).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notas
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- La primera carga puede tardar unos segundos mientras el sistema conecta con el portal de Skandia.
+- Si el portal de Skandia cambia su estructura, es posible que sea necesario actualizar el scraper en `src/app/api/skandia/route.ts`.
