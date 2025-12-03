@@ -14,8 +14,9 @@ export async function searchGoogleNews(query: string): Promise<string> {
         await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
 
         // Navigate to Google News search
-        // Added &tbs=qdr:y to filter for news from the past year
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=nws`;
+        // Using hl=en and gl=US to ensure global coverage for international assets
+        // This fixes the issue where "clean" searches yield 0 results for specific ETFs
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=nws&hl=en&gl=US&tbs=qdr:y`;
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
