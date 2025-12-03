@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Target } from 'puppeteer';
 
-export async function getPortfolioPdf(portfolioName: string): Promise<string | null> {
+export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase64: string | null, pdfUrl: string | null }> {
     let browser: Browser | undefined;
     try {
         console.log(`[PDF Scraper] Launching browser for ${portfolioName}...`);
@@ -33,17 +33,20 @@ export async function getPortfolioPdf(portfolioName: string): Promise<string | n
 
         if (!rowId) {
             console.warn(`[PDF Scraper] Portfolio "${portfolioName}" not found.`);
-            return null;
+            return { pdfBase64: null, pdfUrl: null };
         }
 
         console.log(`[PDF Scraper] Found row ${rowId}. Expanding...`);
         await page.click(`#${rowId}`);
 
         // Wait for dropdown to be visible
-        await page.waitForSelector('#customDate', { visible: true, timeout: 5000 });
+        // The dropdown ID is unique, so waiting for it is fine.
+        await page.waitForSelector('#customDate', { visible: true, timeout: 10000 });
+
+        // Give a small pause for options to populate via JS
+        await new Promise(r => setTimeout(r, 1000));
 
         // Select first option (Latest available month)
-        // We dynamically get the value of the first option to ensure we always pick the latest.
         const firstOptionValue = await page.evaluate(() => {
             const select = document.querySelector('#customDate') as HTMLSelectElement;
             return select?.options[0]?.value;
@@ -57,15 +60,17 @@ export async function getPortfolioPdf(portfolioName: string): Promise<string | n
             await page.select('#customDate', '0');
         }
 
+        // Wait for the PDF button to be interactive. 
+        // It might be animating in.
+        await page.waitForSelector('.PDFButton', { visible: true, timeout: 5000 });
+        await new Promise(r => setTimeout(r, 500)); // Extra safety pause
+
         // Setup listener for new target (the PDF tab)
         const newTargetPromise = new Promise<Target>(resolve => {
             browser!.once('targetcreated', (target: Target) => resolve(target));
         });
 
         console.log('[PDF Scraper] Clicking PDF button...');
-        // The button is .PDFButton. We might need to be specific if there are multiple, but usually only one is visible when expanded.
-        // To be safe, we can find the one inside the expanded details if possible, but the DOM structure is flat.
-        // However, only one row is expanded at a time usually.
         await page.click('.PDFButton');
 
         const target = await newTargetPromise;
@@ -73,9 +78,7 @@ export async function getPortfolioPdf(portfolioName: string): Promise<string | n
 
         if (!newPage) {
             console.warn('[PDF Scraper] New target created but no page found (maybe download?).');
-            // If it's a download, Puppeteer handles it differently. But let's assume it opens a URL for now.
-            // If it is a direct download link, we might need to intercept the request.
-            return null;
+            return { pdfBase64: null, pdfUrl: null };
         }
 
         const pdfUrl = newPage.url();
@@ -86,11 +89,14 @@ export async function getPortfolioPdf(portfolioName: string): Promise<string | n
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        return buffer.toString('base64');
+        return {
+            pdfBase64: buffer.toString('base64'),
+            pdfUrl: pdfUrl
+        };
 
     } catch (error) {
         console.error('[PDF Scraper] Error:', error);
-        return null;
+        return { pdfBase64: null, pdfUrl: null };
     } finally {
         if (browser) await browser.close();
     }

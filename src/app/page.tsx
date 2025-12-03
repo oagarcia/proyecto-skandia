@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Shield, DollarSign, Activity, RefreshCw, Filter } from 'lucide-react';
+import { TrendingUp, Shield, DollarSign, Activity, RefreshCw, Filter, X, BrainCircuit, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { analyzePortfolio, AnalysisResult } from '@/lib/intelligence';
-import { X, BrainCircuit, AlertTriangle, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 
@@ -103,11 +102,14 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
     if (storedKey) setApiKey(storedKey);
   }, []);
 
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
   const handleAnalyze = async () => {
     if (!apiKey) return;
 
     setLoading(true);
     setError(null);
+    setPdfUrl(null);
     localStorage.setItem('gemini_api_key', apiKey);
 
     try {
@@ -121,6 +123,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
 
       if (data.success) {
         setAnalysis(data.analysis);
+        if (data.pdfUrl) setPdfUrl(data.pdfUrl);
       } else {
         setError(data.error || 'Error al generar el análisis');
       }
@@ -138,15 +141,23 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
         animate={{ scale: 1, opacity: 1 }}
         className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl shadow-emerald-500/10 flex flex-col"
       >
-        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-slate-900 to-emerald-950/30 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="bg-emerald-500/20 p-2 rounded-lg">
-              <BrainCircuit className="text-emerald-400" size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Skandia AI Analysis (Gemini)</h2>
-              <p className="text-emerald-400 text-sm font-mono">Analyzing: {portfolio.name}</p>
-            </div>
+        <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10">
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <BrainCircuit className="text-emerald-400" />
+              Análisis AI: {portfolio.name}
+            </h2>
+            {pdfUrl && (
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-emerald-400 hover:text-emerald-300 underline mt-1 block flex items-center gap-1"
+              >
+                <FileText size={12} />
+                Ver Ficha Técnica (PDF)
+              </a>
+            )}
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
             <X size={24} />

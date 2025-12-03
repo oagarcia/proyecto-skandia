@@ -15,28 +15,28 @@ export async function POST(request: Request) {
 
         // Fetch PDF (Ficha Técnica)
         console.log(`[Analysis] Fetching PDF for ${portfolio.name}...`);
-        const pdfBase64 = await getPortfolioPdf(portfolio.name);
+        const { pdfBase64, pdfUrl } = await getPortfolioPdf(portfolio.name);
 
         let prompt = `
-      Act as a senior financial analyst. Analyze the following investment portfolio from Skandia Colombia:
+      Actúa como un analista financiero senior. Analiza el siguiente portafolio de inversión de Skandia Colombia:
       
-      Name: ${portfolio.name}
-      Type: ${portfolio.type}
-      Risk Profile: ${portfolio.risk}
-      Value: ${portfolio.value} Million COP
+      Nombre: ${portfolio.name}
+      Tipo: ${portfolio.type}
+      Perfil de Riesgo: ${portfolio.risk}
+      Valor: ${portfolio.value} Millones COP
       
-      Returns:
-      - Daily: ${portfolio.returns.daily}
-      - Monthly: ${portfolio.returns.monthly}
-      - 6 Months: ${portfolio.returns.sixMonths}
-      - Yearly (YTD): ${portfolio.returns.yearly}
+      Rentabilidades:
+      - Diaria: ${portfolio.returns.daily}
+      - Mensual: ${portfolio.returns.monthly}
+      - 6 Meses: ${portfolio.returns.sixMonths}
+      - Anual (YTD): ${portfolio.returns.yearly}
     `;
 
         const parts: any[] = [];
 
         if (pdfBase64) {
             console.log('[Analysis] PDF fetched successfully. Attaching to prompt.');
-            prompt += `\n\nI have attached the official "Ficha Técnica" (Technical Sheet) PDF for this portfolio. Please use the data in this PDF (holdings, manager comments, historical performance graphs, fees, etc.) to provide a much more detailed and accurate analysis. Prioritize the PDF data if it conflicts with the summary above.`;
+            prompt += `\n\nHe adjuntado la "Ficha Técnica" oficial (PDF) de este portafolio. Por favor, utiliza los datos de este PDF (composiciones, comentarios del gestor, gráficos históricos, comisiones, etc.) para proporcionar un análisis mucho más detallado y preciso. Prioriza los datos del PDF si entran en conflicto con el resumen anterior.`;
 
             parts.push({
                 inlineData: {
@@ -46,18 +46,18 @@ export async function POST(request: Request) {
             });
         } else {
             console.warn('[Analysis] PDF could not be fetched. Proceeding with text-only analysis.');
-            prompt += `\n\n(Note: The technical sheet PDF could not be retrieved. Please analyze based on the provided summary data only.)`;
+            prompt += `\n\n(Nota: No se pudo recuperar la ficha técnica en PDF. Por favor analiza basándote solo en los datos de resumen proporcionados.)`;
         }
 
         prompt += `
-      Please provide a comprehensive markdown report with:
-      1. **Executive Summary**: What is this portfolio and who is it for?
-      2. **Performance Analysis**: Interpret the returns. Is it performing well given the market context?
-      3. **Risk Assessment**: Is the risk profile consistent with the returns?
-      4. **Key Holdings & Strategy**: (Extract this from the PDF if available). What is it investing in?
-      5. **Verdict**: Buy, Hold, or Sell recommendation for a long-term investor.
+      Por favor proporciona un reporte completo en markdown con:
+      1. **Resumen Ejecutivo**: ¿Qué es este portafolio y para quién es?
+      2. **Análisis de Rentabilidad**: Interpreta las rentabilidades. ¿Está funcionando bien dado el contexto del mercado?
+      3. **Evaluación de Riesgo**: ¿Es el perfil de riesgo consistente con los retornos?
+      4. **Composición y Estrategia**: (Extrae esto del PDF si está disponible). ¿En qué invierte?
+      5. **Veredicto**: Recomendación de Compra, Mantener o Venta para un inversor a largo plazo.
       
-      Format with bold headings, bullet points, and professional tone.
+      Formato con encabezados en negrita, viñetas y tono profesional.
     `;
 
         parts.push({ text: prompt });
@@ -84,7 +84,12 @@ export async function POST(request: Request) {
                 const response = await result.response;
                 const text = response.text();
 
-                return NextResponse.json({ success: true, analysis: text, modelUsed: modelName });
+                return NextResponse.json({
+                    success: true,
+                    analysis: text,
+                    modelUsed: modelName,
+                    pdfUrl: pdfUrl
+                });
 
             } catch (error: any) {
                 console.warn(`Failed with model ${modelName}:`, error.message);
