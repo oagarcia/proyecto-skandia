@@ -50,14 +50,24 @@ export async function POST(request: Request) {
         }
 
         prompt += `
-      Por favor proporciona un reporte completo en markdown con:
-      1. **Resumen Ejecutivo**: ¿Qué es este portafolio y para quién es?
-      2. **Análisis de Rentabilidad**: Interpreta las rentabilidades. ¿Está funcionando bien dado el contexto del mercado?
-      3. **Evaluación de Riesgo**: ¿Es el perfil de riesgo consistente con los retornos?
-      4. **Composición y Estrategia**: (Extrae esto del PDF si está disponible). ¿En qué invierte?
-      5. **Veredicto**: Recomendación de Compra, Mantener o Venta para un inversor a largo plazo.
+      Por favor proporciona un reporte completo en markdown estructurado de la siguiente manera:
+
+      ## 1. Resumen Ejecutivo
+      ¿Qué es este portafolio y para quién es?
+
+      ## 2. Análisis de Rentabilidad
+      Interpreta las rentabilidades. ¿Está funcionando bien dado el contexto del mercado?
+
+      ## 3. Evaluación de Riesgo
+      ¿Es el perfil de riesgo consistente con los retornos?
+
+      ## 4. Composición y Estrategia
+      (Extrae esto del PDF si está disponible). ¿En qué invierte?
+
+      ## 5. Veredicto
+      Recomendación de Compra, Mantener o Venta para un inversor a largo plazo.
       
-      Formato con encabezados en negrita, viñetas y tono profesional.
+      Usa viñetas para los detalles y mantén un tono profesional.
     `;
 
         parts.push({ text: prompt });

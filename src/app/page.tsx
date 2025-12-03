@@ -212,7 +212,19 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
 
           {analysis && (
             <div className="prose prose-invert prose-emerald max-w-none">
-              <ReactMarkdown>{analysis}</ReactMarkdown>
+              <ReactMarkdown
+                components={{
+                  h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-8 mb-4 text-emerald-400" {...props} />,
+                  h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-6 mb-3 text-emerald-300 border-b border-white/10 pb-2" {...props} />,
+                  h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-5 mb-2 text-emerald-200" {...props} />,
+                  p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-slate-300" {...props} />,
+                  ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
+                  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                  strong: ({ node, ...props }) => <strong className="text-white font-semibold" {...props} />,
+                }}
+              >
+                {analysis}
+              </ReactMarkdown>
             </div>
           )}
         </div>
