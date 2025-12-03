@@ -48,17 +48,25 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
             return select && select.options.length > 0;
         }, { timeout: 5000 });
 
-        // Select first option (Latest available month)
+        // Select first valid option (Latest available month, skipping empty placeholder)
         const firstOptionValue = await page.evaluate(() => {
             const select = document.querySelector('#customDate') as HTMLSelectElement;
-            return select?.options[0]?.value;
+            if (!select) return null;
+
+            // Iterate through options to find the first one with a non-empty value
+            for (const option of Array.from(select.options)) {
+                if (option.value && option.value.trim() !== "") {
+                    return option.value;
+                }
+            }
+            return null;
         });
 
         if (firstOptionValue) {
-            console.log(`[PDF Scraper] Selecting first option (value: ${firstOptionValue})...`);
+            console.log(`[PDF Scraper] Selecting first valid option (value: ${firstOptionValue})...`);
             await page.select('#customDate', firstOptionValue);
         } else {
-            console.warn('[PDF Scraper] No options found in dropdown even after wait. Trying default "0".');
+            console.warn('[PDF Scraper] No valid options found in dropdown. Trying default "0".');
             await page.select('#customDate', '0');
         }
 
