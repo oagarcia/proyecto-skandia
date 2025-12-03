@@ -66,9 +66,11 @@ export async function POST(request: Request) {
         // For PDF analysis, Pro models are often better, but Flash 1.5+ supports it too.
         // Let's try 1.5 Pro first for best PDF understanding, then Flash.
         const modelsToTry = [
-            'gemini-1.5-pro',
-            'gemini-1.5-flash',
-            'gemini-2.0-flash-exp', // If available
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-2.5-pro',
+            'gemini-2.0-pro-exp',
+            'gemini-flash-latest'
         ];
 
         let lastError;
