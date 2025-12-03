@@ -186,7 +186,10 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <RefreshCw className="animate-spin text-emerald-500" size={48} />
-              <p className="text-slate-400 animate-pulse">Generando análisis financiero detallado...</p>
+              <p className="text-slate-400 animate-pulse text-center">
+                Generando análisis financiero detallado...<br />
+                <span className="text-xs text-slate-500">(Obteniendo Ficha Técnica PDF, esto puede tomar unos segundos)</span>
+              </p>
             </div>
           )}
 

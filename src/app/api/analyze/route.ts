@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getPortfolioPdf } from '@/lib/pdf-scraper';
 
 export async function POST(request: Request) {
     try {
@@ -9,15 +10,65 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
         }
 
+        // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // List of models to try in order of preference
+        // Fetch PDF (Ficha Técnica)
+        console.log(`[Analysis] Fetching PDF for ${portfolio.name}...`);
+        const pdfBase64 = await getPortfolioPdf(portfolio.name);
+
+        let prompt = `
+      Act as a senior financial analyst. Analyze the following investment portfolio from Skandia Colombia:
+      
+      Name: ${portfolio.name}
+      Type: ${portfolio.type}
+      Risk Profile: ${portfolio.risk}
+      Value: ${portfolio.value} Million COP
+      
+      Returns:
+      - Daily: ${portfolio.returns.daily}
+      - Monthly: ${portfolio.returns.monthly}
+      - 6 Months: ${portfolio.returns.sixMonths}
+      - Yearly (YTD): ${portfolio.returns.yearly}
+    `;
+
+        const parts: any[] = [];
+
+        if (pdfBase64) {
+            console.log('[Analysis] PDF fetched successfully. Attaching to prompt.');
+            prompt += `\n\nI have attached the official "Ficha Técnica" (Technical Sheet) PDF for this portfolio. Please use the data in this PDF (holdings, manager comments, historical performance graphs, fees, etc.) to provide a much more detailed and accurate analysis. Prioritize the PDF data if it conflicts with the summary above.`;
+
+            parts.push({
+                inlineData: {
+                    data: pdfBase64,
+                    mimeType: "application/pdf",
+                },
+            });
+        } else {
+            console.warn('[Analysis] PDF could not be fetched. Proceeding with text-only analysis.');
+            prompt += `\n\n(Note: The technical sheet PDF could not be retrieved. Please analyze based on the provided summary data only.)`;
+        }
+
+        prompt += `
+      Please provide a comprehensive markdown report with:
+      1. **Executive Summary**: What is this portfolio and who is it for?
+      2. **Performance Analysis**: Interpret the returns. Is it performing well given the market context?
+      3. **Risk Assessment**: Is the risk profile consistent with the returns?
+      4. **Key Holdings & Strategy**: (Extract this from the PDF if available). What is it investing in?
+      5. **Verdict**: Buy, Hold, or Sell recommendation for a long-term investor.
+      
+      Format with bold headings, bullet points, and professional tone.
+    `;
+
+        parts.push({ text: prompt });
+
+        // Models to try in order of preference (Flash is faster/cheaper, Pro is better)
+        // For PDF analysis, Pro models are often better, but Flash 1.5+ supports it too.
+        // Let's try 1.5 Pro first for best PDF understanding, then Flash.
         const modelsToTry = [
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
-            'gemini-2.5-pro',
-            'gemini-2.0-pro-exp',
-            'gemini-flash-latest'
+            'gemini-1.5-pro',
+            'gemini-1.5-flash',
+            'gemini-2.0-flash-exp', // If available
         ];
 
         let lastError;
@@ -27,29 +78,7 @@ export async function POST(request: Request) {
                 console.log(`Attempting to generate with model: ${modelName}`);
                 const model = genAI.getGenerativeModel({ model: modelName });
 
-                const prompt = `
-              Actúa como un experto asesor financiero de alto nivel. Analiza el siguiente portafolio de inversión de Skandia y genera un reporte detallado.
-              
-              Datos del Portafolio:
-              - Nombre: ${portfolio.name}
-              - Tipo: ${portfolio.type}
-              - Valor del Fondo: ${portfolio.value} Millones COP
-              - Perfil de Riesgo: ${portfolio.risk}
-              - Rentabilidad Diaria: ${portfolio.returns.daily}
-              - Rentabilidad Mensual: ${portfolio.returns.monthly}
-              - Rentabilidad Semestral: ${portfolio.returns.sixMonths}
-              - Rentabilidad Anual (YTD): ${portfolio.returns.yearly}
-
-              Tu análisis debe incluir:
-              1. **Resumen Ejecutivo**: Interpretación de las rentabilidades (corto vs largo plazo). ¿Es consistente? ¿Está en recuperación?
-              2. **Análisis de Riesgos**: Riesgos específicos basados en el tipo de activo (Renta Variable, Fija, etc.) y la situación actual del mercado global/local implícita.
-              3. **Ventajas Competitivas**: Por qué elegir este fondo.
-              4. **Veredicto Final**: Una recomendación clara (Comprar, Mantener, Vender) con una justificación breve.
-
-              Formato de salida: Markdown limpio y bien estructurado. Usa negritas para resaltar puntos clave. No uses bloques de código, solo texto formateado.
-            `;
-
-                const result = await model.generateContent(prompt);
+                const result = await model.generateContent(parts);
                 const response = await result.response;
                 const text = response.text();
 
