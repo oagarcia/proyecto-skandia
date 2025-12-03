@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getPortfolioPdf } from '@/lib/pdf-scraper';
+import { searchGoogleNews } from '@/lib/news-scraper';
+import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 
 export async function POST(request: Request) {
     try {
@@ -17,26 +19,76 @@ export async function POST(request: Request) {
         console.log(`[Analysis] Fetching PDF for ${portfolio.name}...`);
         const { pdfBase64, pdfUrl } = await getPortfolioPdf(portfolio.name);
 
+        // 3. Obtener noticias en tiempo real (Manual Scraper)
+        let newsContext = "";
+        let extractedHoldings: string[] = [];
+
+        try {
+            // Extract holdings from PDF if available
+            if (pdfBase64) {
+                try {
+                    const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+                    extractedHoldings = await extractHoldingsFromPdf(pdfBuffer);
+                    console.log(`[Analyze API] Extracted holdings: ${extractedHoldings.join(', ')} `);
+                } catch (e) {
+                    console.error('[Analyze API] Error extracting holdings from PDF:', e);
+                }
+            }
+
+            // Construct search query
+            let query = "";
+            if (extractedHoldings.length > 0) {
+                // Use top 5 holdings for the search query with OR operator
+                // Example: "Holding 1" OR "Holding 2" OR "Holding 3"
+                const topHoldings = extractedHoldings.slice(0, 5).map(h => `"${h}"`).join(' OR ');
+                query = `${topHoldings}`;
+            } else {
+                // Fallback query
+                query = `Skandia Colombia "${portfolio.name}" economia mercado`;
+            }
+
+            console.log(`[Analyze API] Fetching news for query: ${query} `);
+            newsContext = await searchGoogleNews(query);
+
+            if (!newsContext || newsContext.length < 50) {
+                console.log('[Analyze API] No specific news found, trying broader query...');
+                let broadQuery = "Skandia Colombia economía mercado financiero";
+
+                if (extractedHoldings.length > 0) {
+                    // Fallback to just the first holding if available
+                    broadQuery = `"${extractedHoldings[0]}"`;
+                    console.log(`[Analyze API] Using first holding for fallback: ${broadQuery}`);
+                }
+
+                newsContext = await searchGoogleNews(broadQuery);
+            }
+            console.log(`[Analyze API] News fetched(length: ${newsContext.length})`);
+            console.log(`[Analyze API] News fetched ( ${newsContext})`);
+
+        } catch (error) {
+            console.error('[Analyze API] Error fetching news:', error);
+            newsContext = "No se pudieron obtener noticias en tiempo real.";
+        }
         let prompt = `
-      Actúa como un analista financiero senior. Analiza el siguiente portafolio de inversión de Skandia Colombia:
-      
-      Nombre: ${portfolio.name}
-      Tipo: ${portfolio.type}
+      Actúa como un analista financiero senior.Analiza el siguiente portafolio de inversión de Skandia Colombia:
+
+Nombre: ${portfolio.name}
+Tipo: ${portfolio.type}
       Perfil de Riesgo: ${portfolio.risk}
-      Valor: ${portfolio.value} Millones COP
-      
-      Rentabilidades:
-      - Diaria: ${portfolio.returns.daily}
-      - Mensual: ${portfolio.returns.monthly}
-      - 6 Meses: ${portfolio.returns.sixMonths}
-      - Anual (YTD): ${portfolio.returns.yearly}
-    `;
+Valor: ${portfolio.value} Millones COP
+
+Rentabilidades:
+- Diaria: ${portfolio.returns.daily}
+- Mensual: ${portfolio.returns.monthly}
+- 6 Meses: ${portfolio.returns.sixMonths}
+- Anual(YTD): ${portfolio.returns.yearly}
+`;
 
         const parts: any[] = [];
 
         if (pdfBase64) {
             console.log('[Analysis] PDF fetched successfully. Attaching to prompt.');
-            prompt += `\n\nHe adjuntado la "Ficha Técnica" oficial (PDF) de este portafolio. Por favor, utiliza los datos de este PDF (composiciones, comentarios del gestor, gráficos históricos, comisiones, etc.) para proporcionar un análisis mucho más detallado y preciso. Prioriza los datos del PDF si entran en conflicto con el resumen anterior.`;
+            prompt += `\n\nHe adjuntado la "Ficha Técnica" oficial(PDF) de este portafolio.Por favor, utiliza los datos de este PDF(composiciones, comentarios del gestor, gráficos históricos, comisiones, etc.) para proporcionar un análisis mucho más detallado y preciso.Prioriza los datos del PDF si entran en conflicto con el resumen anterior.`;
 
             parts.push({
                 inlineData: {
@@ -46,29 +98,36 @@ export async function POST(request: Request) {
             });
         } else {
             console.warn('[Analysis] PDF could not be fetched. Proceeding with text-only analysis.');
-            prompt += `\n\n(Nota: No se pudo recuperar la ficha técnica en PDF. Por favor analiza basándote solo en los datos de resumen proporcionados.)`;
+            prompt += `\n\n(Nota: No se pudo recuperar la ficha técnica en PDF.Por favor analiza basándote solo en los datos de resumen proporcionados.)`;
         }
 
         prompt += `
       Por favor proporciona un reporte completo en markdown estructurado de la siguiente manera:
 
       ## 1. Resumen Ejecutivo
-      ¿Qué es este portafolio y para quién es?
+      ¿Qué es este portafolio y para quién es ?
 
       ## 2. Análisis de Rentabilidad
-      Interpreta las rentabilidades. ¿Está funcionando bien dado el contexto del mercado?
+      Interpreta las rentabilidades. ¿Está funcionando bien dado el contexto del mercado ?
 
       ## 3. Evaluación de Riesgo
-      ¿Es el perfil de riesgo consistente con los retornos?
+      ¿Es el perfil de riesgo consistente con los retornos ?
 
       ## 4. Composición y Estrategia
-      (Extrae esto del PDF si está disponible). ¿En qué invierte?
+    (Extrae esto del PDF si está disponible). ¿En qué invierte ?
 
-      ## 5. Análisis de Noticias y Sentimiento (Tiempo Real)
-      Identifica las principales posiciones en el PDF (ej. acciones, fondos, emisores).
-      Usa Google Search para buscar noticias financieras RECIENTES (de hoy o esta semana) sobre estas inversiones específicas.
-      Analiza cómo estas noticias podrían afectar el desempeño del portafolio a corto plazo.
-      Cita las fuentes si es posible.
+      ## 5. Análisis de Noticias y Sentimiento(Tiempo Real)
+      Fecha actual: ${new Date().toLocaleDateString('es-CO')}
+      
+      CONTEXTO DE NOTICIAS RECIENTES(Obtenido vía Google News):
+      ${newsContext}
+      
+      Instrucciones OBLIGATORIAS para esta sección:
+- DEBES incluir esta sección en tu respuesta.
+      - Utiliza las noticias proporcionadas arriba para evaluar el sentimiento actual del mercado.
+      - Si las noticias mencionan específicamente a Skandia o los activos del portafolio, destácalo.
+      - Si las noticias son generales, relaciónalas con la composición del portafolio.
+      - Si NO hay noticias relevantes, indica explícitamente: "No se encontraron noticias específicas recientes para este portafolio, pero basándonos en el contexto general..." y procede con un análisis de mercado general.
 
       ## 6. Veredicto
       Recomendación de Compra, Mantener o Venta para un inversor a largo plazo.
@@ -80,7 +139,7 @@ export async function POST(request: Request) {
 
         // Determine which model to use
         // If selectedModel is provided, use it. Otherwise fallback to list.
-        const modelsToTry = [
+        const modelsToTry = selectedModel ? [selectedModel] : [
             'gemini-2.5-flash',
             'gemini-2.0-flash',
             'gemini-2.5-pro',
@@ -92,12 +151,11 @@ export async function POST(request: Request) {
 
         for (const modelName of modelsToTry) {
             try {
-                console.log(`Attempting to generate with model: ${modelName}`);
-                // Enable Google Search Grounding
+                console.log(`Attempting to generate with model: ${modelName} `);
+                // Disable Google Search Grounding since we are manually injecting news
                 const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    tools: [{ googleSearch: {} }]
-                } as any);
+                    model: modelName
+                });
 
                 const result = await model.generateContent(parts);
                 const response = await result.response;
@@ -111,7 +169,7 @@ export async function POST(request: Request) {
                 });
 
             } catch (error: any) {
-                console.warn(`Failed with model ${modelName}:`, error.message);
+                console.warn(`Failed with model ${modelName}: `, error.message);
                 lastError = error;
                 // Continue to next model
             }
