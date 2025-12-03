@@ -1,7 +1,8 @@
-import puppeteer, { Browser, Target } from 'puppeteer';
 
-export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase64: string | null, pdfUrl: string | null }> {
-    let browser: Browser | undefined;
+const puppeteer = require('puppeteer');
+
+async function getPortfolioPdf(portfolioName) {
+    let browser;
     try {
         console.log(`[PDF Scraper] Launching browser for ${portfolioName}...`);
         browser = await puppeteer.launch({
@@ -44,13 +45,13 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
 
         // Wait for options to populate
         await page.waitForFunction(() => {
-            const select = document.querySelector('#customDate') as HTMLSelectElement;
+            const select = document.querySelector('#customDate');
             return select && select.options.length > 0;
         }, { timeout: 5000 });
 
         // Select first option (Latest available month)
         const firstOptionValue = await page.evaluate(() => {
-            const select = document.querySelector('#customDate') as HTMLSelectElement;
+            const select = document.querySelector('#customDate');
             return select?.options[0]?.value;
         });
 
@@ -63,12 +64,11 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
         }
 
         // Extract hidden values to construct the URL manually
-        // This bypasses the need to click the button and handle window.open
         const params = await page.evaluate(() => {
-            const origin = (document.querySelector('#origin') as HTMLInputElement)?.value;
-            const idPortfolio = (document.querySelector('#idPortfolio') as HTMLInputElement)?.value;
-            const idProduct = (document.querySelector('#idProduct') as HTMLInputElement)?.value;
-            const period = (document.querySelector('#customDate') as HTMLSelectElement)?.value;
+            const origin = document.querySelector('#origin')?.value;
+            const idPortfolio = document.querySelector('#idPortfolio')?.value;
+            const idProduct = document.querySelector('#idProduct')?.value;
+            const period = document.querySelector('#customDate')?.value;
             return { origin, idPortfolio, idProduct, period };
         });
 
@@ -79,55 +79,36 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
             return { pdfBase64: null, pdfUrl: null };
         }
 
-        // Construct the Security.aspx URL
-        // https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx?Origen=...
         const securityUrl = `https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx?Origen=${params.origin}&Period=${params.period}&IdVariable=${params.idPortfolio}&Product=${params.idProduct}`;
 
         console.log(`[PDF Scraper] Navigating to Security URL: ${securityUrl}`);
 
-        // Get cookies from the browser session to authenticate the Node.js fetch
-        const cookies = await page.cookies();
-        const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log(`[PDF Scraper] Fetching PDF data via browser context...`);
 
-        console.log(`[PDF Scraper] Fetching PDF via Node.js with ${cookies.length} cookies...`);
+        const pdfDataUrl = await page.evaluate(async (url) => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Fetch failed with status ${response.status}`);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }, securityUrl);
 
-        // Use Node.js native fetch (available in Next.js/Node 18+)
-        const response = await fetch(securityUrl, {
-            headers: {
-                'Cookie': cookieHeader,
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            },
-            redirect: 'follow'
-        });
-
-        if (!response.ok) {
-            console.error(`[PDF Scraper] Fetch failed with status ${response.status} ${response.statusText}`);
+        if (!pdfDataUrl || !pdfDataUrl.startsWith('data:application/pdf')) {
+            console.error('[PDF Scraper] Failed to fetch PDF data or invalid format.');
             return { pdfBase64: null, pdfUrl: null };
         }
 
-        // Check content type
-        const contentType = response.headers.get('content-type');
-        console.log(`[PDF Scraper] Response Content-Type: ${contentType}`);
+        console.log('[PDF Scraper] PDF data fetched successfully.');
 
-        // The response might be the PDF or the redirect page if 'follow' didn't work as expected (though it should).
-        // If it's a PDF, content-type should be application/pdf or application/octet-stream.
-
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Basic validation: Check PDF signature (%PDF)
-        if (buffer.lastIndexOf('%PDF') === -1 && !contentType?.includes('pdf')) {
-            console.warn('[PDF Scraper] Response does not look like a PDF (missing signature or wrong mime).');
-            // Log a bit of the content to debug
-            console.log('[PDF Scraper] Response preview:', buffer.slice(0, 100).toString());
-            return { pdfBase64: null, pdfUrl: null };
-        }
-
-        console.log('[PDF Scraper] PDF downloaded successfully.');
+        const base64 = pdfDataUrl.split(',')[1];
 
         return {
-            pdfBase64: buffer.toString('base64'),
-            pdfUrl: securityUrl // We use the security URL as the link
+            pdfBase64: base64,
+            pdfUrl: securityUrl
         };
 
     } catch (error) {
@@ -137,3 +118,24 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
         if (browser) await browser.close();
     }
 }
+
+async function test() {
+    console.log('Testing PDF Scraper...');
+    const portfolioName = 'FPV Acciones Global';
+
+    try {
+        const result = await getPortfolioPdf(portfolioName);
+
+        if (result.pdfUrl && result.pdfBase64) {
+            console.log('SUCCESS: PDF fetched successfully!');
+            console.log('URL:', result.pdfUrl);
+            console.log('Base64 Length:', result.pdfBase64.length);
+        } else {
+            console.error('FAILURE: PDF not fetched (null result).');
+        }
+    } catch (error) {
+        console.error('FAILURE: Error during fetch:', error);
+    }
+}
+
+test();
