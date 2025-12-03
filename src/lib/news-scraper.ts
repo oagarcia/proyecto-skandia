@@ -16,7 +16,7 @@ export async function searchGoogleNews(query: string): Promise<string> {
         // Navigate to Google News search
         // Using hl=en and gl=US to ensure global coverage for international assets
         // This fixes the issue where "clean" searches yield 0 results for specific ETFs
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=nws&hl=en&gl=US&tbs=qdr:y`;
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=nws&hl=en&gl=US&tbs=qdr:m`;
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
