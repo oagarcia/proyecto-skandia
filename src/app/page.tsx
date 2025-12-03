@@ -103,6 +103,38 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
   }, []);
 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [models, setModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [isValidating, setIsValidating] = useState(false);
+
+  const handleValidateKey = async () => {
+    if (!apiKey) return;
+    setIsValidating(true);
+    setError(null);
+    setModels([]);
+
+    try {
+      const res = await fetch('/api/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey }),
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.models.length > 0) {
+        setModels(data.models);
+        setSelectedModel(data.models[0]);
+        localStorage.setItem('gemini_api_key', apiKey);
+      } else {
+        setError(data.error || 'No se encontraron modelos disponibles.');
+      }
+    } catch (e) {
+      setError('Error al validar la API Key.');
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!apiKey) return;
@@ -116,7 +148,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portfolio, apiKey }),
+        body: JSON.stringify({ portfolio, apiKey, model: selectedModel }),
       });
 
       const data = await res.json();
@@ -175,21 +207,51 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                 <p>Para realizar un análisis con IA generativa, necesitas una API Key de Google Gemini. Tu clave se guardará localmente en tu navegador por lo que no se recomienda usar un dispositivo compartido.</p>
               </div>
 
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  placeholder="Ingresa tu Gemini API Key"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors"
-                />
-                <button
-                  onClick={handleAnalyze}
-                  disabled={!apiKey}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Analizar
-                </button>
+              <div className="flex flex-col gap-4">
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder="Ingresa tu Gemini API Key"
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      setModels([]); // Reset models when key changes
+                      setSelectedModel('');
+                    }}
+                    className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors"
+                  />
+                  <button
+                    onClick={handleValidateKey}
+                    disabled={!apiKey || isValidating}
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  >
+                    {isValidating ? <RefreshCw className="animate-spin" size={16} /> : 'Validar'}
+                  </button>
+                </div>
+
+                {models.length > 0 && (
+                  <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-sm text-slate-400">Selecciona el Modelo:</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-white"
+                      >
+                        {models.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleAnalyze}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <BrainCircuit size={18} />
+                        Analizar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

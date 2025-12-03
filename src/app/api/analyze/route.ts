@@ -4,7 +4,7 @@ import { getPortfolioPdf } from '@/lib/pdf-scraper';
 
 export async function POST(request: Request) {
     try {
-        const { portfolio, apiKey } = await request.json();
+        const { portfolio, apiKey, model: selectedModel } = await request.json();
 
         if (!apiKey) {
             return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
@@ -78,9 +78,8 @@ export async function POST(request: Request) {
 
         parts.push({ text: prompt });
 
-        // Models to try in order of preference (Flash is faster/cheaper, Pro is better)
-        // For PDF analysis, Pro models are often better, but Flash 1.5+ supports it too.
-        // Let's try 1.5 Pro first for best PDF understanding, then Flash.
+        // Determine which model to use
+        // If selectedModel is provided, use it. Otherwise fallback to list.
         const modelsToTry = [
             'gemini-2.5-flash',
             'gemini-2.0-flash',
