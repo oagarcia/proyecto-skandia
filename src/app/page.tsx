@@ -161,7 +161,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                   <AlertTriangle size={16} />
                   Requiere Gemini API Key
                 </p>
-                <p>Para realizar un análisis avanzado con IA generativa, necesitas una API Key de Google Gemini. Tu clave se guardará localmente en tu navegador.</p>
+                <p>Para realizar un análisis con IA generativa, necesitas una API Key de Google Gemini. Tu clave se guardará localmente en tu navegador por lo que no se recomienda usar un dispositivo compartido.</p>
               </div>
 
               <div className="flex gap-2">
