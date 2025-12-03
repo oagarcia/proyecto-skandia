@@ -7,6 +7,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { analyzePortfolio, AnalysisResult } from '@/lib/intelligence';
 import ReactMarkdown from 'react-markdown';
+import { aiSettings } from '@/config/ai-settings';
 
 
 function cn(...inputs: ClassValue[]) {
@@ -124,7 +125,30 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
 
       if (data.success && data.models.length > 0) {
         setModels(data.models);
-        setSelectedModel(data.models[0]);
+
+        let defaultModel = data.models[0];
+
+        if (aiSettings.restrictModels) {
+          // Priority 1: Configured default model (if it exists in the list and is allowed)
+          if (aiSettings.defaultModel &&
+            data.models.includes(aiSettings.defaultModel) &&
+            aiSettings.allowedModels.includes(aiSettings.defaultModel)) {
+            defaultModel = aiSettings.defaultModel;
+          } else {
+            // Priority 2: First available model that is allowed
+            const firstAllowed = data.models.find((m: string) => aiSettings.allowedModels.includes(m));
+            if (firstAllowed) {
+              defaultModel = firstAllowed;
+            }
+          }
+        } else {
+          // If no restriction, just check if default model exists in the list
+          if (aiSettings.defaultModel && data.models.includes(aiSettings.defaultModel)) {
+            defaultModel = aiSettings.defaultModel;
+          }
+        }
+
+        setSelectedModel(defaultModel);
         localStorage.setItem('gemini_api_key', apiKey);
       } else {
         setError(data.error || 'No se encontraron modelos disponibles.');
@@ -238,9 +262,14 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                         onChange={(e) => setSelectedModel(e.target.value)}
                         className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-white"
                       >
-                        {models.map(model => (
-                          <option key={model} value={model}>{model}</option>
-                        ))}
+                        {models.map(model => {
+                          const isAllowed = !aiSettings.restrictModels || aiSettings.allowedModels.includes(model);
+                          return (
+                            <option key={model} value={model} disabled={!isAllowed}>
+                              {model} {!isAllowed ? '(No disponible)' : ''}
+                            </option>
+                          );
+                        })}
                       </select>
                       <button
                         onClick={handleAnalyze}
