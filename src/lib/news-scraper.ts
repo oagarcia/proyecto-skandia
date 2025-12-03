@@ -15,7 +15,14 @@ export async function searchGoogleNews(query: string): Promise<string> {
 
         // Navigate to Google News search
         // Added &tbs=qdr:y to filter for news from the past year
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=nws&hl=es&gl=CO&tbs=qdr:y`;
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=nws`;
+        console.log(`---------------------------------------------------`);
+        console.log(`---------------------------------------------------`);
+        console.log(`---------------------------------------------------`);
+        console.log(`[News Scraper] Navigating to: ${searchUrl}`);
+        console.log(`---------------------------------------------------`);
+        console.log(`---------------------------------------------------`);
+        console.log(`---------------------------------------------------`);
         await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
 
         // Extract news items
