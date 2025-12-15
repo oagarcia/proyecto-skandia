@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getPortfolioPdf } from '@/lib/pdf-scraper';
 import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
+import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
+import { fetchYahooFinanceData } from '@/lib/yahoo-finance';
 
 export async function POST(request: Request) {
     try {
@@ -21,6 +23,7 @@ export async function POST(request: Request) {
 
         // 3. Obtener noticias en tiempo real (Manual Scraper)
         let newsContext = "";
+        let newsSourceLabel = "CONTEXTO DE NOTICIAS RECIENTES (Obtenido vía Google News)";
         let extractedHoldings: string[] = [];
 
         try {
@@ -47,23 +50,42 @@ export async function POST(request: Request) {
                 query = `Skandia Colombia "${portfolio.name}" economia mercado`;
             }
 
-            console.log(`[Analyze API] Fetching news for query: ${query} `);
-            newsContext = await searchGoogleNews(query);
 
-            if (!newsContext || newsContext.length < 50) {
-                console.log('[Analyze API] No specific news found, trying broader query...');
-                let broadQuery = "Skandia Colombia economía mercado financiero";
+            // 3b. Yahoo Finance Research (Config Check)
+            // @ts-ignore
+            const yahooSymbols = yahooFinanceResearchConfig.portfolios[portfolio.name];
 
-                if (extractedHoldings.length > 0) {
-                    // Fallback to just the first holding if available
-                    broadQuery = `"${extractedHoldings[0]}"`;
-                    console.log(`[Analyze API] Using first holding for fallback: ${broadQuery}`);
+            if (yahooSymbols && Array.isArray(yahooSymbols) && yahooSymbols.length > 0) {
+                console.log(`[Analyze API] Yahoo Finance configuration found for ${portfolio.name}:`, yahooSymbols);
+                newsSourceLabel = "FUENTE: YAHOO FINANCE (Configuración Específica)";
+                newsContext = ""; // Clear default context if any
+
+                for (const symbol of yahooSymbols) {
+                    const data = await fetchYahooFinanceData(symbol);
+                    newsContext += `\n${data}\n`;
                 }
 
-                newsContext = await searchGoogleNews(broadQuery);
+            } else {
+                // Fallback to existing Google News Search
+                console.log(`[Analyze API] No Yahoo config. Fetching Google news for query: ${query} `);
+                newsContext = await searchGoogleNews(query);
+
+                if (!newsContext || newsContext.length < 50) {
+                    console.log('[Analyze API] No specific news found, trying broader query...');
+                    let broadQuery = "Skandia Colombia economía mercado financiero";
+
+                    if (extractedHoldings.length > 0) {
+                        // Fallback to just the first holding if available
+                        broadQuery = `"${extractedHoldings[0]}"`;
+                        console.log(`[Analyze API] Using first holding for fallback: ${broadQuery}`);
+                    }
+
+                    newsContext = await searchGoogleNews(broadQuery);
+                }
             }
+
             console.log(`[Analyze API] News fetched(length: ${newsContext.length})`);
-            console.log(`[Analyze API] News fetched ( ${newsContext})`);
+
 
         } catch (error) {
             console.error('[Analyze API] Error fetching news:', error);
@@ -119,7 +141,7 @@ Rentabilidades:
       ## 5. Análisis de Noticias y Sentimiento(Tiempo Real)
       Fecha actual: ${new Date().toLocaleDateString('es-CO')}
       
-      CONTEXTO DE NOTICIAS RECIENTES(Obtenido vía Google News):
+      ${newsSourceLabel}:
       ${newsContext}
       
       Instrucciones OBLIGATORIAS para esta sección:
