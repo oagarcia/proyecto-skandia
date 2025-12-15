@@ -256,11 +256,11 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                 {models.length > 0 && (
                   <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
                     <label className="text-sm text-slate-400">Selecciona el Modelo:</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <select
                         value={selectedModel}
                         onChange={(e) => setSelectedModel(e.target.value)}
-                        className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-white"
+                        className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-white w-full"
                       >
                         {models.map(model => {
                           const isAllowed = !aiSettings.restrictModels || aiSettings.allowedModels.includes(model);
@@ -273,7 +273,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                       </select>
                       <button
                         onClick={handleAnalyze}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-2 rounded-lg transition-colors flex items-center gap-2"
+                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
                       >
                         <BrainCircuit size={18} />
                         Analizar
