@@ -312,7 +312,16 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                   ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
                   li: ({ node, ...props }) => <li className="pl-1" {...props} />,
                   strong: ({ node, ...props }) => <strong className="text-white font-semibold" {...props} />,
-                  a: ({ node, ...props }) => <a target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 underline" {...props} />,
+                  a: ({ node, ...props }) => (
+                    <a
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"
+                      {...props}
+                    >
+                      {props.children}
+                    </a>
+                  ),
                 }}
               >
                 {analysis}

@@ -29,6 +29,7 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
 
         // Timeout generoso para evitar fallos por red lenta
         await page.goto(mainUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        console.log('go to url -----------> ', mainUrl);
 
         // Esperar selectores clave
         try {
@@ -59,7 +60,7 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
         });
 
         let extractedText = data.log;
-        extractedText += `URL Principal: [${mainUrl}](${mainUrl})\n`;
+        extractedText += `[Fuente Yahoo Finance](${mainUrl})\n`; // Link principal al final del bloque de precio
         extractedText += "NOTICIAS RECIENTES (Con detalle):\n";
 
         // Extracción de noticias
@@ -73,7 +74,7 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
 
             for (let item of Array.from(storyItems)) {
                 const titleEl = item.querySelector('h3');
-                const linkEl = item.querySelector('a');
+                const linkEl = item.querySelector('a') as HTMLAnchorElement | null;
 
                 if (titleEl && linkEl && linkEl.href) {
                     const title = titleEl.textContent?.trim() || "";
@@ -94,7 +95,7 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
                     const links = newsSection.querySelectorAll('h3 a, a h3'); // A veces el h3 está dentro del a, o al revés
                     for (let el of Array.from(links)) {
                         // Navegar al nodo A si tenemos el h3
-                        const aTag = el.tagName === 'A' ? el : el.closest('a');
+                        const aTag = (el.tagName === 'A' ? el : el.closest('a')) as HTMLAnchorElement | null;
                         if (aTag && aTag.href && aTag.textContent) {
                             results.push({
                                 title: aTag.textContent.trim(),
@@ -119,13 +120,13 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
             }
 
             console.log(`[Yahoo Finance] Scraping article: ${item.title}`);
-            extractedText += `\n### [${item.title}](${item.url})\n`;
+            extractedText += `\n### ${item.title}\n`; // Título sin enlace aquí
 
             try {
                 extractedText += await scrapeArticleContent(browser, item.url);
             } catch (e) {
                 console.error('[Yahoo Finance] Error scraping article detail', e);
-                extractedText += `(No se pudo cargar el detalle)\n`;
+                extractedText += `(No se pudo cargar el detalle)\n [Fuente](${item.url})\n`;
             }
         }
 
@@ -157,6 +158,8 @@ async function scrapeArticleContent(browser: any, url: string): Promise<string> 
     try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
+        console.log('go to article url -----------> ', url);
+
         const summary = await page.evaluate(() => {
             // Yahoo news articles typically use class 'caas-body'
             const body = document.querySelector('.caas-body');
@@ -175,9 +178,9 @@ async function scrapeArticleContent(browser: any, url: string): Promise<string> 
 
         await page.close();
         if (summary && summary.length > 0) {
-            return `Resumen:\n> ${summary.replace(/\n/g, '\n> ')}\n`;
+            return `Resumen:\n> ${summary.replace(/\n/g, '\n> ')}\n\n[Fuente Noticia](${url})\n`;
         }
-        return "(Sin contenido extraíble)\n";
+        return `(Sin contenido extraíble)\n\n[Fuente Noticia](${url})\n`;
 
     } catch (e) {
         if (page) await page.close();
