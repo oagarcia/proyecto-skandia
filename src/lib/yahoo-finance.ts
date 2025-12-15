@@ -40,24 +40,37 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
             console.log('[Yahoo Finance] Price/Header element wait timeout, trying to proceed...');
         }
 
-        const data = await page.evaluate(() => {
+        const data = await page.evaluate((symbol) => {
             let log = `\n--- INFORMACIÓN YAHOO FINANCE ---\n`;
 
-            // Extracción robusta usando selectores específicos de Yahoo Finance (fin-streamer)
+            // Extracción robusta usando selectores específicos de Yahoo Finance
+            // Estrategia 1: fin-streamer con data-symbol (más específico para evitar el sidebar)
             const getStreamerValue = (field: string) => {
-                const el = document.querySelector(`fin-streamer[data-field="${field}"]`);
-                return el ? el.textContent?.trim() : "N/A";
+                const el = document.querySelector(`fin-streamer[data-field="${field}"][data-symbol="${symbol}"]`);
+                return el ? el.textContent?.trim() : null;
             };
 
-            const price = getStreamerValue('regularMarketPrice');
-            const change = getStreamerValue('regularMarketChange');
-            const pct = getStreamerValue('regularMarketChangePercent');
+            // Estrategia 2: data-test="qsp-price" (Quote Summary Page Price)
+            const getPriceByTestId = () => {
+                const el = document.querySelector('[data-test="qsp-price"]');
+                return el ? el.textContent?.trim() : null;
+            };
+
+            let price = getStreamerValue('regularMarketPrice') || getPriceByTestId() || "N/A";
+            const change = getStreamerValue('regularMarketChange') || "N/A";
+            const pct = getStreamerValue('regularMarketChangePercent') || "N/A";
+
+            // Si el precio es N/A, intentamos buscar cualquier stream activo que coincida con el precio large
+            if (price === "N/A") {
+                const mainPriceEl = document.querySelector('section[data-testid="quote-price"] fin-streamer[data-field="regularMarketPrice"]');
+                if (mainPriceEl) price = mainPriceEl.textContent?.trim() || "N/A";
+            }
 
             log += `PRECIO ACTUAL: ${price}\n`;
             log += `CAMBIO: ${change} (${pct})\n\n`;
 
             return { log };
-        });
+        }, symbol);
 
         let extractedText = data.log;
         extractedText += `[Fuente Yahoo Finance](${mainUrl})\n`; // Link principal al final del bloque de precio

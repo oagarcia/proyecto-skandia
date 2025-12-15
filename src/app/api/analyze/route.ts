@@ -146,6 +146,11 @@ Rentabilidades:
       
       Instrucciones OBLIGATORIAS para esta sección:
 - DEBES incluir esta sección en tu respuesta.
+      - IMPORTANTE: Para cada noticia analizada, DEBES conservar el enlace de fuente proporcionado en el contexto (formato [Fuente Noticia](url)). NO elimines estos enlaces.
+      - El formato de cada noticia debe ser:
+        - Título de la noticia
+        - Resumen/Análisis
+        - [Fuente Noticia](url) (Chip style)
       - Utiliza las noticias proporcionadas arriba para evaluar el sentimiento actual del mercado.
       - Si las noticias mencionan específicamente a Skandia o los activos del portafolio, destácalo.
       - Si las noticias son generales, relaciónalas con la composición del portafolio.
