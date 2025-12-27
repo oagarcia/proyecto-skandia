@@ -12,10 +12,12 @@ Esta aplicación permite monitorear en tiempo real los portafolios de inversión
 
 ## Tecnologías
 
+- ** RAG y LLMs de Gemini **
 - **Next.js 15**: Framework de React.
 - **Puppeteer**: Para la extracción de datos (Scraping).
 - **Tailwind CSS v4**: Estilos modernos.
 - **Framer Motion**: Animaciones fluidas.
+- **LangChain**: Pendiente de implementar para incluir deciiones con Agentes para decidir fuentes externas de información
 
 ## Instrucciones de Uso
 
