@@ -370,7 +370,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string[]>(['Portafolios Abiertos']);
   const [rankedFilterCategory, setRankedFilterCategory] = useState<string[]>(['Portafolios Abiertos']);
-  const [rankedFilterRisk, setRankedFilterRisk] = useState<string[]>([]);
+  const [rankedFilterRisk, setRankedFilterRisk] = useState<string[]>(['Conservador', 'Moderado', 'Agresivo']);
+  const [rankedSortCriteria, setRankedSortCriteria] = useState<string>('Score');
   const [filterType, setFilterType] = useState<string>('All');
   const [filterRisk, setFilterRisk] = useState<string>('All');
   const [error, setError] = useState<string | null>(null);
@@ -439,8 +440,24 @@ export default function Home() {
     .filter(p => rankedFilterCategory.length === 0 || rankedFilterCategory.includes(p.category || ''))
     .filter(p => rankedFilterRisk.length === 0 || rankedFilterRisk.includes(p.risk || ''))
     .sort((a, b) => {
-      const valA = parseFloat(a.returns.yearly.replace('%', '').replace(',', '.'));
-      const valB = parseFloat(b.returns.yearly.replace('%', '').replace(',', '.'));
+      const parse = (v: string) => parseFloat(v.replace('%', '').replace(',', '.')) || 0;
+
+      if (rankedSortCriteria === 'Score') {
+        const scoreA = parse(a.returns.yearly) * 0.50 + parse(a.returns.sixMonths) * 0.30 + parse(a.returns.monthly) * 0.15 + parse(a.returns.daily) * 0.05;
+        const scoreB = parse(b.returns.yearly) * 0.50 + parse(b.returns.sixMonths) * 0.30 + parse(b.returns.monthly) * 0.15 + parse(b.returns.daily) * 0.05;
+        return scoreB - scoreA;
+      }
+
+      const valA = rankedSortCriteria === 'Yearly' ? parse(a.returns.yearly) :
+        rankedSortCriteria === 'SixMonths' ? parse(a.returns.sixMonths) :
+          rankedSortCriteria === 'Monthly' ? parse(a.returns.monthly) :
+            parse(a.returns.daily);
+
+      const valB = rankedSortCriteria === 'Yearly' ? parse(b.returns.yearly) :
+        rankedSortCriteria === 'SixMonths' ? parse(b.returns.sixMonths) :
+          rankedSortCriteria === 'Monthly' ? parse(b.returns.monthly) :
+            parse(b.returns.daily);
+
       return valB - valA;
     });
 
@@ -466,9 +483,26 @@ export default function Home() {
         {/* Ranking Section */}
         {!loading && (
           <section className="mb-12">
-            <div className="flex items-center gap-2 mb-6">
-              <TrendingUp className="text-emerald-400" />
-              <h2 className="text-2xl font-semibold">Ranking de Desempeño (Filtrado)</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="text-emerald-400" />
+                <h2 className="text-2xl font-semibold">Ranking de Desempeño (Filtrado)</h2>
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-900/50 p-1 rounded-xl border border-white/5">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-3">Ordenar por:</span>
+                <select
+                  value={rankedSortCriteria}
+                  onChange={(e) => setRankedSortCriteria(e.target.value)}
+                  className="bg-slate-800 border-none rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-1 focus:ring-emerald-500 outline-none cursor-pointer"
+                >
+                  <option value="Score">Puntaje Combinado</option>
+                  <option value="Yearly">Año (YTD)</option>
+                  <option value="SixMonths">6 Meses</option>
+                  <option value="Monthly">Mes</option>
+                  <option value="Daily">1 Día</option>
+                </select>
+              </div>
             </div>
 
             <div className="space-y-4 mb-6">
