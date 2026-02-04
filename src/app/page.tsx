@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Shield, DollarSign, Activity, RefreshCw, Filter, X, BrainCircuit, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
+import { TrendingUp, RefreshCw, X, BrainCircuit, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { analyzePortfolio, AnalysisResult } from '@/lib/intelligence';
 import ReactMarkdown from 'react-markdown';
 import { aiSettings } from '@/config/ai-settings';
 
@@ -36,7 +35,7 @@ const RiskBadge = ({ risk }: { risk: string }) => {
     Agresivo: 'bg-red-500/20 text-red-400 border-red-500/30',
     Unknown: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   };
-  // @ts-ignore
+  // @ts-expect-error - index access
   const style = colors[risk] || colors.Unknown;
 
   return (
@@ -46,22 +45,21 @@ const RiskBadge = ({ risk }: { risk: string }) => {
   );
 };
 
-const PortfolioCard = ({ portfolio }: { portfolio: Portfolio }) => {
+const ReturnItem = ({ label, value }: { label: string, value: string }) => {
   const parseReturn = (val: string) => parseFloat(val.replace('%', '').replace(',', '.'));
-  const yearly = parseReturn(portfolio.returns.yearly);
+  const val = parseReturn(value);
+  const isPos = val >= 0;
+  return (
+    <div className="bg-slate-800/50 p-2 rounded-lg">
+      <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">{label}</p>
+      <p className={cn("text-lg font-bold", isPos ? "text-emerald-400" : "text-red-400")}>
+        {value}
+      </p>
+    </div>
+  );
+};
 
-  const ReturnItem = ({ label, value }: { label: string, value: string }) => {
-    const val = parseReturn(value);
-    const isPos = val >= 0;
-    return (
-      <div className="bg-slate-800/50 p-2 rounded-lg">
-        <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">{label}</p>
-        <p className={cn("text-lg font-bold", isPos ? "text-emerald-400" : "text-red-400")}>
-          {value}
-        </p>
-      </div>
-    );
-  };
+const PortfolioCard = ({ portfolio }: { portfolio: Portfolio }) => {
 
   return (
     <motion.div
@@ -334,27 +332,30 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
   );
 };
 
-// Reusable Category Tabs Component
-const CategoryTabs = ({ selected, onToggle }: { selected: string[], onToggle: (cat: string) => void }) => (
-  <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-    {['Portafolios Abiertos', 'Portafolios a la Medida', 'Portafolios Especiales'].map(cat => {
-      const isActive = selected.includes(cat);
-      return (
-        <button
-          key={cat}
-          onClick={() => onToggle(cat)}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border flex items-center gap-2",
-            isActive
-              ? "bg-emerald-500 text-black border-emerald-500"
-              : "bg-slate-900 text-slate-400 border-white/10 hover:border-white/20 hover:text-white"
-          )}
-        >
-          {isActive && <CheckCircle size={14} />}
-          {cat}
-        </button>
-      );
-    })}
+// Reusable Filter Tabs Component
+const FilterTabs = ({ items, selected, onToggle, label }: { items: string[], selected: string[], onToggle: (item: string) => void, label?: string }) => (
+  <div className="flex flex-col gap-2 mb-4">
+    {label && <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{label}</span>}
+    <div className="flex gap-2 overflow-x-auto pb-2">
+      {items.map(item => {
+        const isActive = selected.includes(item);
+        return (
+          <button
+            key={item}
+            onClick={() => onToggle(item)}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border flex items-center gap-2",
+              isActive
+                ? "bg-emerald-500 text-black border-emerald-500"
+                : "bg-slate-900 text-slate-400 border-white/10 hover:border-white/20 hover:text-white"
+            )}
+          >
+            {isActive && <CheckCircle size={14} />}
+            {item}
+          </button>
+        );
+      })}
+    </div>
   </div>
 );
 
@@ -363,6 +364,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string[]>(['Portafolios Abiertos']);
   const [top10FilterCategory, setTop10FilterCategory] = useState<string[]>(['Portafolios Abiertos']);
+  const [top10FilterRisk, setTop10FilterRisk] = useState<string[]>([]);
   const [filterType, setFilterType] = useState<string>('All');
   const [filterRisk, setFilterRisk] = useState<string>('All');
   const [error, setError] = useState<string | null>(null);
@@ -407,6 +409,14 @@ export default function Home() {
     );
   };
 
+  const toggleTop10Risk = (risk: string) => {
+    setTop10FilterRisk(prev =>
+      prev.includes(risk)
+        ? prev.filter(r => r !== risk)
+        : [...prev, risk]
+    );
+  };
+
   const filteredPortfolios = portfolios.filter(p => {
     // If no category is selected, show none (or all? User said "activate 1, 2 or 3". If 0, usually nothing).
     // Let's assume if nothing is selected, we show nothing, or we could show all. 
@@ -418,9 +428,10 @@ export default function Home() {
     return true;
   });
 
-  // Top 10 Logic - Derived from portfolios but filtered by top10FilterCategory
+  // Top 10 Logic - Derived from portfolios but filtered by top10FilterCategory and top10FilterRisk
   const top10 = portfolios
     .filter(p => top10FilterCategory.length === 0 || top10FilterCategory.includes(p.category || ''))
+    .filter(p => top10FilterRisk.length === 0 || top10FilterRisk.includes(p.risk || ''))
     .sort((a, b) => {
       const valA = parseFloat(a.returns.yearly.replace('%', '').replace(',', '.'));
       const valB = parseFloat(b.returns.yearly.replace('%', '').replace(',', '.'));
@@ -455,7 +466,20 @@ export default function Home() {
               <h2 className="text-2xl font-semibold">Top 10 Portafolios (Filtrados)</h2>
             </div>
 
-            <CategoryTabs selected={top10FilterCategory} onToggle={toggleTop10Category} />
+            <div className="space-y-4 mb-6">
+              <FilterTabs
+                label="Categoría"
+                items={['Portafolios Abiertos', 'Portafolios a la Medida', 'Portafolios Especiales']}
+                selected={top10FilterCategory}
+                onToggle={toggleTop10Category}
+              />
+              <FilterTabs
+                label="Riesgo"
+                items={['Conservador', 'Moderado', 'Agresivo']}
+                selected={top10FilterRisk}
+                onToggle={toggleTop10Risk}
+              />
+            </div>
 
             {top10.length > 0 ? (
               <div className="overflow-x-auto pb-4">
@@ -497,7 +521,11 @@ export default function Home() {
         )}
 
         {/* Category Tabs (Main Grid) */}
-        <CategoryTabs selected={filterCategory} onToggle={toggleCategory} />
+        <FilterTabs
+          items={['Portafolios Abiertos', 'Portafolios a la Medida', 'Portafolios Especiales']}
+          selected={filterCategory}
+          onToggle={toggleCategory}
+        />
 
         {/* Filters */}
         <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
