@@ -151,7 +151,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
       } else {
         setError(data.error || 'No se encontraron modelos disponibles.');
       }
-    } catch (e) {
+    } catch {
       setError('Error al validar la API Key.');
     } finally {
       setIsValidating(false);
@@ -181,7 +181,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
       } else {
         setError(data.error || 'Error al generar el análisis');
       }
-    } catch (e) {
+    } catch {
       setError('Error de conexión');
     } finally {
       setLoading(false);
@@ -303,14 +303,14 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
             <div className="prose prose-invert prose-emerald max-w-none">
               <ReactMarkdown
                 components={{
-                  h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-8 mb-4 text-emerald-400" {...props} />,
-                  h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-6 mb-3 text-emerald-300 border-b border-white/10 pb-2" {...props} />,
-                  h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-5 mb-2 text-emerald-200" {...props} />,
-                  p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-slate-300" {...props} />,
-                  ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
-                  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                  strong: ({ node, ...props }) => <strong className="text-white font-semibold" {...props} />,
-                  a: ({ node, ...props }) => (
+                  h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-8 mb-4 text-emerald-400" {...props} />,
+                  h2: ({ ...props }) => <h2 className="text-xl font-bold mt-6 mb-3 text-emerald-300 border-b border-white/10 pb-2" {...props} />,
+                  h3: ({ ...props }) => <h3 className="text-lg font-bold mt-5 mb-2 text-emerald-200" {...props} />,
+                  p: ({ ...props }) => <p className="mb-4 leading-relaxed text-slate-300" {...props} />,
+                  ul: ({ ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
+                  li: ({ ...props }) => <li className="pl-1" {...props} />,
+                  strong: ({ ...props }) => <strong className="text-white font-semibold" {...props} />,
+                  a: ({ ...props }) => (
                     <a
                       target="_blank"
                       rel="noopener noreferrer"
@@ -363,8 +363,8 @@ export default function Home() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string[]>(['Portafolios Abiertos']);
-  const [top10FilterCategory, setTop10FilterCategory] = useState<string[]>(['Portafolios Abiertos']);
-  const [top10FilterRisk, setTop10FilterRisk] = useState<string[]>([]);
+  const [rankedFilterCategory, setRankedFilterCategory] = useState<string[]>(['Portafolios Abiertos']);
+  const [rankedFilterRisk, setRankedFilterRisk] = useState<string[]>([]);
   const [filterType, setFilterType] = useState<string>('All');
   const [filterRisk, setFilterRisk] = useState<string>('All');
   const [error, setError] = useState<string | null>(null);
@@ -401,16 +401,16 @@ export default function Home() {
     );
   };
 
-  const toggleTop10Category = (cat: string) => {
-    setTop10FilterCategory(prev =>
+  const toggleRankedCategory = (cat: string) => {
+    setRankedFilterCategory(prev =>
       prev.includes(cat)
         ? prev.filter(c => c !== cat)
         : [...prev, cat]
     );
   };
 
-  const toggleTop10Risk = (risk: string) => {
-    setTop10FilterRisk(prev =>
+  const toggleRankedRisk = (risk: string) => {
+    setRankedFilterRisk(prev =>
       prev.includes(risk)
         ? prev.filter(r => r !== risk)
         : [...prev, risk]
@@ -428,16 +428,15 @@ export default function Home() {
     return true;
   });
 
-  // Top 10 Logic - Derived from portfolios but filtered by top10FilterCategory and top10FilterRisk
-  const top10 = portfolios
-    .filter(p => top10FilterCategory.length === 0 || top10FilterCategory.includes(p.category || ''))
-    .filter(p => top10FilterRisk.length === 0 || top10FilterRisk.includes(p.risk || ''))
+  // Ranking Logic - Derived from portfolios but filtered by rankedFilterCategory and rankedFilterRisk
+  const rankedPortfolios = portfolios
+    .filter(p => rankedFilterCategory.length === 0 || rankedFilterCategory.includes(p.category || ''))
+    .filter(p => rankedFilterRisk.length === 0 || rankedFilterRisk.includes(p.risk || ''))
     .sort((a, b) => {
       const valA = parseFloat(a.returns.yearly.replace('%', '').replace(',', '.'));
       const valB = parseFloat(b.returns.yearly.replace('%', '').replace(',', '.'));
       return valB - valA;
-    })
-    .slice(0, 10);
+    });
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-8 font-sans">
@@ -458,33 +457,33 @@ export default function Home() {
           </button>
         </header>
 
-        {/* Top 10 Section */}
+        {/* Ranking Section */}
         {!loading && (
           <section className="mb-12">
             <div className="flex items-center gap-2 mb-6">
               <TrendingUp className="text-emerald-400" />
-              <h2 className="text-2xl font-semibold">Top 10 Portafolios (Filtrados)</h2>
+              <h2 className="text-2xl font-semibold">Ranking de Desempeño (Filtrado)</h2>
             </div>
 
             <div className="space-y-4 mb-6">
               <FilterTabs
                 label="Categoría"
                 items={['Portafolios Abiertos', 'Portafolios a la Medida', 'Portafolios Especiales']}
-                selected={top10FilterCategory}
-                onToggle={toggleTop10Category}
+                selected={rankedFilterCategory}
+                onToggle={toggleRankedCategory}
               />
               <FilterTabs
                 label="Riesgo"
                 items={['Conservador', 'Moderado', 'Agresivo']}
-                selected={top10FilterRisk}
-                onToggle={toggleTop10Risk}
+                selected={rankedFilterRisk}
+                onToggle={toggleRankedRisk}
               />
             </div>
 
-            {top10.length > 0 ? (
+            {rankedPortfolios.length > 0 ? (
               <div className="overflow-x-auto pb-4">
                 <div className="flex gap-4 min-w-max">
-                  {top10.map((p, index) => (
+                  {rankedPortfolios.map((p, index) => (
                     <div key={p.id} className="w-64 bg-slate-900 border border-white/10 rounded-xl p-4 hover:border-emerald-500/50 transition-colors cursor-pointer group" onClick={() => setSelectedPortfolio(p)}>
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-emerald-500 font-bold text-lg">#{index + 1}</span>
@@ -515,7 +514,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="text-slate-500 italic">Selecciona una categoría para ver el Top 10.</div>
+              <div className="text-slate-500 italic">Selecciona una categoría para ver el ranking.</div>
             )}
           </section>
         )}
