@@ -45,16 +45,22 @@ const RiskBadge = ({ risk }: { risk: string }) => {
   );
 };
 
-const ReturnItem = ({ label, value }: { label: string, value: string }) => {
+const ReturnValue = ({ value, className }: { value: string, className?: string }) => {
   const parseReturn = (val: string) => parseFloat(val.replace('%', '').replace(',', '.'));
   const val = parseReturn(value);
   const isPos = val >= 0;
   return (
+    <span className={cn(className, isPos ? "text-emerald-400" : "text-red-400")}>
+      {value}
+    </span>
+  );
+};
+
+const ReturnItem = ({ label, value }: { label: string, value: string }) => {
+  return (
     <div className="bg-slate-800/50 p-2 rounded-lg">
       <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">{label}</p>
-      <p className={cn("text-lg font-bold", isPos ? "text-emerald-400" : "text-red-400")}>
-        {value}
-      </p>
+      <ReturnValue value={value} className="text-lg font-bold" />
     </div>
   );
 };
@@ -494,19 +500,19 @@ export default function Home() {
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <p className="text-[10px] text-slate-500">Año</p>
-                          <p className="text-sm font-bold text-white">{p.returns.yearly}</p>
+                          <ReturnValue value={p.returns.yearly} className="text-sm font-bold" />
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-500">Mes</p>
-                          <p className="text-sm font-bold text-white">{p.returns.monthly}</p>
+                          <ReturnValue value={p.returns.monthly} className="text-sm font-bold" />
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-500">6M</p>
-                          <p className="text-sm font-bold text-white">{p.returns.sixMonths}</p>
+                          <ReturnValue value={p.returns.sixMonths} className="text-sm font-bold" />
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-500">Día</p>
-                          <p className="text-sm font-bold text-white">{p.returns.daily}</p>
+                          <ReturnValue value={p.returns.daily} className="text-sm font-bold" />
                         </div>
                       </div>
                     </div>
