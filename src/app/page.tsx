@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, RefreshCw, X, BrainCircuit, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
+import { TrendingUp, RefreshCw, X, BrainCircuit, AlertTriangle, CheckCircle, FileText, Activity } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
@@ -486,7 +486,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-2">
                 <TrendingUp className="text-emerald-400" />
-                <h2 className="text-2xl font-semibold">Ranking de Desempeño (Filtrado)</h2>
+                <h2 className="text-2xl font-semibold">Ranking de Desempeño</h2>
               </div>
 
               <div className="flex items-center gap-3 bg-slate-900/50 p-1 rounded-xl border border-white/5">
@@ -521,10 +521,10 @@ export default function Home() {
             </div>
 
             {rankedPortfolios.length > 0 ? (
-              <div className="overflow-x-auto pb-4">
-                <div className="flex gap-4 min-w-max">
+              <div className="overflow-x-auto pb-4 momentum-scroll snap-x snap-mandatory">
+                <div className="flex gap-4 min-w-max px-1">
                   {rankedPortfolios.map((p, index) => (
-                    <div key={p.id} className="w-64 bg-slate-900 border border-white/10 rounded-xl p-4 hover:border-emerald-500/50 transition-colors cursor-pointer group" onClick={() => setSelectedPortfolio(p)}>
+                    <div key={p.id} className="w-64 bg-slate-900 border border-white/10 rounded-xl p-4 hover:border-emerald-500/50 transition-colors cursor-pointer group snap-start" onClick={() => setSelectedPortfolio(p)}>
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-emerald-500 font-bold text-lg">#{index + 1}</span>
                         <RiskBadge risk={p.risk} />
@@ -559,68 +559,76 @@ export default function Home() {
           </section>
         )}
 
-        {/* Category Tabs (Main Grid) */}
-        <FilterTabs
-          items={['Portafolios Abiertos', 'Portafolios a la Medida', 'Portafolios Especiales']}
-          selected={filterCategory}
-          onToggle={toggleCategory}
-        />
-
-        {/* Filters */}
-        <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="All">Todos los Tipos</option>
-            <option value="RV">Renta Variable (RV)</option>
-            <option value="RF">Renta Fija (RF)</option>
-            <option value="IA">Inv. Alternativa (IA)</option>
-          </select>
-
-          <select
-            value={filterRisk}
-            onChange={(e) => setFilterRisk(e.target.value)}
-            className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="All">Todos los Riesgos</option>
-            <option value="Conservador">Conservador</option>
-            <option value="Moderado">Moderado</option>
-            <option value="Agresivo">Agresivo</option>
-          </select>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl mb-8 text-center">
-            {error}
+        {/* Main Grid Section */}
+        <section className="mt-16">
+          <div className="flex items-center gap-2 mb-6">
+            <Activity className="text-emerald-400" />
+            <h2 className="text-2xl font-semibold">Explorador de Portafolios</h2>
           </div>
-        )}
 
-        {/* Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-64 bg-slate-900/50 rounded-xl border border-white/5"></div>
-            ))}
+          {/* Category Tabs (Main Grid) */}
+          <FilterTabs
+            items={['Portafolios Abiertos', 'Portafolios a la Medida', 'Portafolios Especiales']}
+            selected={filterCategory}
+            onToggle={toggleCategory}
+          />
+
+          {/* Filters */}
+          <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value="All">Todos los Tipos</option>
+              <option value="RV">Renta Variable (RV)</option>
+              <option value="RF">Renta Fija (RF)</option>
+              <option value="IA">Inv. Alternativa (IA)</option>
+            </select>
+
+            <select
+              value={filterRisk}
+              onChange={(e) => setFilterRisk(e.target.value)}
+              className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value="All">Todos los Riesgos</option>
+              <option value="Conservador">Conservador</option>
+              <option value="Moderado">Moderado</option>
+              <option value="Agresivo">Agresivo</option>
+            </select>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPortfolios.map(portfolio => (
-              <div key={portfolio.id} className="relative">
-                <PortfolioCard portfolio={portfolio} />
-                <button
-                  onClick={() => setSelectedPortfolio(portfolio)}
-                  className="absolute bottom-4 right-4 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 border border-emerald-500/20"
-                >
-                  <BrainCircuit size={14} />
-                  AI Analysis
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl mb-8 text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="h-64 bg-slate-900/50 rounded-xl border border-white/5"></div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPortfolios.map(portfolio => (
+                <div key={portfolio.id} className="relative">
+                  <PortfolioCard portfolio={portfolio} />
+                  <button
+                    onClick={() => setSelectedPortfolio(portfolio)}
+                    className="absolute bottom-4 right-4 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 border border-emerald-500/20"
+                  >
+                    <BrainCircuit size={14} />
+                    Análisis con IA
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Modal */}
         {selectedPortfolio && (
