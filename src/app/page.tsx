@@ -529,7 +529,7 @@ export default function Home() {
                         <span className="text-emerald-500 font-bold text-lg">#{index + 1}</span>
                         <RiskBadge risk={p.risk} />
                       </div>
-                      <h3 className="font-semibold truncate mb-2 group-hover:text-emerald-400 text-sm">{p.name}</h3>
+                      <h3 title={p.name} className="font-semibold truncate mb-2 group-hover:text-emerald-400 text-sm">{p.name}</h3>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
