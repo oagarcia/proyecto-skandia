@@ -5,21 +5,45 @@ import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import { fetchYahooFinanceData } from '@/lib/yahoo-finance';
+import { validatePortfolio } from '@/lib/validation';
+
+interface TextPart {
+    text: string;
+}
+
+interface InlineDataPart {
+    inlineData: {
+        mimeType: string;
+        data: string;
+    };
+}
+
+type Part = TextPart | InlineDataPart;
 
 export async function POST(request: Request) {
     try {
         const { portfolio, apiKey, model: selectedModel } = await request.json();
 
+        // 1. Input Validation
         if (!apiKey) {
             return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
         }
+
+        const validation = validatePortfolio(portfolio);
+        if (!validation.isValid) {
+            console.warn('[Analyze API] Validation failed:', validation.error);
+            return NextResponse.json({ success: false, error: validation.error }, { status: 400 });
+        }
+
+        // Use the validated portfolio object
+        const validPortfolio = validation.portfolio!;
 
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
 
         // Fetch PDF (Ficha Técnica)
-        console.log(`[Analysis] Fetching PDF for ${portfolio.name}...`);
-        const { pdfBase64, pdfUrl } = await getPortfolioPdf(portfolio.name);
+        console.log(`[Analysis] Fetching PDF for ${validPortfolio.name}...`);
+        const { pdfBase64, pdfUrl } = await getPortfolioPdf(validPortfolio.name);
 
         // 3. Obtener noticias en tiempo real (Manual Scraper)
         let newsContext = "";
@@ -47,16 +71,16 @@ export async function POST(request: Request) {
                 query = `${topHoldings}`;
             } else {
                 // Fallback query
-                query = `Skandia Colombia "${portfolio.name}" economia mercado`;
+                query = `Skandia Colombia "${validPortfolio.name}" economia mercado`;
             }
 
 
             // 3b. Yahoo Finance Research (Config Check)
-            // @ts-ignore
-            const yahooSymbols = yahooFinanceResearchConfig.portfolios[portfolio.name];
+            // @ts-expect-error - Accessing by dynamic key
+            const yahooSymbols = yahooFinanceResearchConfig.portfolios[validPortfolio.name];
 
             if (yahooSymbols && Array.isArray(yahooSymbols) && yahooSymbols.length > 0) {
-                console.log(`[Analyze API] Yahoo Finance configuration found for ${portfolio.name}:`, yahooSymbols);
+                console.log(`[Analyze API] Yahoo Finance configuration found for ${validPortfolio.name}:`, yahooSymbols);
                 newsSourceLabel = "FUENTE: YAHOO FINANCE (Configuración Específica)";
                 newsContext = ""; // Clear default context if any
 
@@ -94,19 +118,19 @@ export async function POST(request: Request) {
         let prompt = `
       Actúa como un analista financiero senior.Analiza el siguiente portafolio de inversión de Skandia Colombia:
 
-Nombre: ${portfolio.name}
-Tipo: ${portfolio.type}
-      Perfil de Riesgo: ${portfolio.risk}
-Valor: ${portfolio.value} Millones COP
+Nombre: ${validPortfolio.name}
+Tipo: ${validPortfolio.type}
+      Perfil de Riesgo: ${validPortfolio.risk}
+Valor: ${validPortfolio.value} Millones COP
 
 Rentabilidades:
-- Diaria: ${portfolio.returns.daily}
-- Mensual: ${portfolio.returns.monthly}
-- 6 Meses: ${portfolio.returns.sixMonths}
-- Anual(YTD): ${portfolio.returns.yearly}
+- Diaria: ${validPortfolio.returns.daily}
+- Mensual: ${validPortfolio.returns.monthly}
+- 6 Meses: ${validPortfolio.returns.sixMonths}
+- Anual(YTD): ${validPortfolio.returns.yearly}
 `;
 
-        const parts: any[] = [];
+        const parts: Part[] = [];
 
         if (pdfBase64) {
             console.log('[Analysis] PDF fetched successfully. Attaching to prompt.');
@@ -173,7 +197,7 @@ Rentabilidades:
             'gemini-flash-latest'
         ];
 
-        let lastError;
+        let lastError: unknown;
 
         for (const modelName of modelsToTry) {
             try {
@@ -194,40 +218,28 @@ Rentabilidades:
                     pdfUrl: pdfUrl
                 });
 
-            } catch (error: any) {
-                console.warn(`Failed with model ${modelName}: `, error.message);
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                console.warn(`Failed with model ${modelName}: `, errorMessage);
                 lastError = error;
                 // Continue to next model
             }
         }
 
         // If all failed
-        console.error('All models failed. Last error:', lastError);
-
-        // DEBUG: Try to list available models to understand why
-        try {
-            const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-            const listData = await listResp.json();
-            console.log('DEBUG: Available models for this key:', JSON.stringify(listData, null, 2));
-
-            return NextResponse.json({
-                success: false,
-                error: `All models failed. Last error: ${lastError?.message}. Available models: ${listData.models?.map((m: any) => m.name).join(', ') || 'None found'}`
-            }, { status: 500 });
-        } catch (debugError) {
-            console.error('Failed to list models:', debugError);
-        }
+        const lastErrorMessage = lastError instanceof Error ? lastError.message : 'Unknown error';
+        console.error('All models failed. Last error:', lastErrorMessage);
 
         return NextResponse.json({
             success: false,
-            error: `All models failed. Last error: ${lastError?.message || 'Unknown error'}`
+            error: 'Failed to generate analysis with all available models. Please check your API key or try again later.'
         }, { status: 500 });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Gemini API Error:', error);
         return NextResponse.json({
             success: false,
-            error: error.message || 'Failed to generate analysis'
+            error: 'An internal server error occurred'
         }, { status: 500 });
     }
 }
