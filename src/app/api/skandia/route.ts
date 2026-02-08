@@ -12,6 +12,23 @@ export async function GET(request: Request) {
     const from = searchParams.get('from') || firstDay;
     const to = searchParams.get('to') || lastDay;
 
+    // Validate dates (YYYY-MM-DD format)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(from) || !dateRegex.test(to)) {
+        return NextResponse.json({ success: false, error: 'Invalid date format. Use YYYY-MM-DD.' }, { status: 400 });
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        return NextResponse.json({ success: false, error: 'Invalid date values.' }, { status: 400 });
+    }
+
+    if (fromDate > toDate) {
+        return NextResponse.json({ success: false, error: 'Start date cannot be after end date.' }, { status: 400 });
+    }
+
     let browser;
 
     try {
@@ -45,10 +62,11 @@ export async function GET(request: Request) {
 
         // 2. Input dates and Calculate
         await page.evaluate((f, t) => {
-            // @ts-ignore
-            document.getElementById('datepickerFrom').value = f;
-            // @ts-ignore
-            document.getElementById('datepickerTo').value = t;
+            const datepickerFrom = document.getElementById('datepickerFrom') as HTMLInputElement;
+            if (datepickerFrom) datepickerFrom.value = f;
+
+            const datepickerTo = document.getElementById('datepickerTo') as HTMLInputElement;
+            if (datepickerTo) datepickerTo.value = t;
         }, from, to);
 
         try {
