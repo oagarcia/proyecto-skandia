@@ -12,6 +12,16 @@ export async function GET(request: Request) {
     const from = searchParams.get('from') || firstDay;
     const to = searchParams.get('to') || lastDay;
 
+    // Security Enhancement: Input Validation
+    const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+    if (!DATE_REGEX.test(from) || !DATE_REGEX.test(to)) {
+        return NextResponse.json({ success: false, error: 'Invalid date format. Use YYYY-MM-DD.' }, { status: 400 });
+    }
+
+    if (new Date(from) > new Date(to)) {
+        return NextResponse.json({ success: false, error: 'From date cannot be after To date.' }, { status: 400 });
+    }
+
     let browser;
 
     try {
