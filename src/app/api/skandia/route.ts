@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 
+function isValidDate(dateString: string): boolean {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    return date.getFullYear() === year &&
+           date.getMonth() === month - 1 &&
+           date.getDate() === day;
+}
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const now = new Date();
@@ -11,6 +23,14 @@ export async function GET(request: Request) {
 
     const from = searchParams.get('from') || firstDay;
     const to = searchParams.get('to') || lastDay;
+
+    if (!isValidDate(from) || !isValidDate(to)) {
+        return NextResponse.json({ success: false, error: 'Invalid date format. Use YYYY-MM-DD.' }, { status: 400 });
+    }
+
+    if (from > to) {
+        return NextResponse.json({ success: false, error: 'Start date cannot be after end date.' }, { status: 400 });
+    }
 
     let browser;
 
