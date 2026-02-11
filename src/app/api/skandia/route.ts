@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 
+function isValidDate(dateString: string): boolean {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return false;
+    // Strict check: date.toISOString() returns YYYY-MM-DDTHH:mm:ss.sssZ
+    return date.toISOString().startsWith(dateString);
+}
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const now = new Date();
@@ -9,8 +18,23 @@ export async function GET(request: Request) {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    const from = searchParams.get('from') || firstDay;
-    const to = searchParams.get('to') || lastDay;
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+
+    if (fromParam && !isValidDate(fromParam)) {
+        return NextResponse.json({ success: false, error: 'Invalid "from" date format. Use YYYY-MM-DD.' }, { status: 400 });
+    }
+
+    if (toParam && !isValidDate(toParam)) {
+        return NextResponse.json({ success: false, error: 'Invalid "to" date format. Use YYYY-MM-DD.' }, { status: 400 });
+    }
+
+    const from = fromParam || firstDay;
+    const to = toParam || lastDay;
+
+    if (new Date(from) > new Date(to)) {
+        return NextResponse.json({ success: false, error: '"from" date cannot be after "to" date.' }, { status: 400 });
+    }
 
     let browser;
 
@@ -45,9 +69,9 @@ export async function GET(request: Request) {
 
         // 2. Input dates and Calculate
         await page.evaluate((f, t) => {
-            // @ts-ignore
+            // @ts-expect-error - value property exists on HTMLInputElement but TS sees generic HTMLElement
             document.getElementById('datepickerFrom').value = f;
-            // @ts-ignore
+            // @ts-expect-error - value property exists on HTMLInputElement but TS sees generic HTMLElement
             document.getElementById('datepickerTo').value = t;
         }, from, to);
 
@@ -69,7 +93,21 @@ export async function GET(request: Request) {
         await page.waitForSelector('#tableData1', { timeout: 10000 });
 
         const portfolios = await page.evaluate(() => {
-            const results: any[] = [];
+            // Define structure for the results
+            const results: {
+                id: string;
+                category: string;
+                name: string;
+                type: string;
+                value: string;
+                risk: string;
+                returns: {
+                    daily: string;
+                    monthly: string;
+                    sixMonths: string;
+                    yearly: string;
+                };
+            }[] = [];
 
             const categories = [
                 { id: 'tableData1', name: 'Portafolios Abiertos' },
