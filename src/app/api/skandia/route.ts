@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
+import { isValidDate, isValidDateRange } from '@/lib/date-validation';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -11,6 +12,22 @@ export async function GET(request: Request) {
 
     const from = searchParams.get('from') || firstDay;
     const to = searchParams.get('to') || lastDay;
+
+    // Security: Validate date format (YYYY-MM-DD) and range
+    // This prevents potential injection or logic errors in the scraper
+    if (!isValidDate(from) || !isValidDate(to)) {
+        return NextResponse.json(
+            { success: false, error: 'Invalid date format. Use YYYY-MM-DD.' },
+            { status: 400 }
+        );
+    }
+
+    if (!isValidDateRange(from, to)) {
+        return NextResponse.json(
+            { success: false, error: '"from" date must be before or equal to "to" date.' },
+            { status: 400 }
+        );
+    }
 
     let browser;
 
