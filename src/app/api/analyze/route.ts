@@ -8,11 +8,14 @@ import { fetchYahooFinanceData } from '@/lib/yahoo-finance';
 
 export async function POST(request: Request) {
     try {
-        const { portfolio, apiKey, model: selectedModel } = await request.json();
+        const body = await request.json();
 
-        if (!apiKey) {
-            return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
+        const validationError = validateAnalyzeRequest(body);
+        if (validationError) {
+            return NextResponse.json({ success: false, error: validationError }, { status: 400 });
         }
+
+        const { portfolio, apiKey, model: selectedModel } = body;
 
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
@@ -230,4 +233,30 @@ Rentabilidades:
             error: error.message || 'Failed to generate analysis'
         }, { status: 500 });
     }
+}
+
+function validateAnalyzeRequest(body: any): string | null {
+    if (!body || typeof body !== 'object') return 'Invalid request body';
+
+    const { portfolio, apiKey, model } = body;
+    if (!apiKey || typeof apiKey !== 'string') return 'API Key is required';
+    if (!portfolio || typeof portfolio !== 'object') return 'Portfolio data is required';
+
+    const required = ['name', 'type', 'risk', 'value', 'returns'];
+    if (required.some(f => !portfolio[f] && portfolio[f] !== 0)) return 'Missing portfolio fields';
+
+    if (typeof portfolio.name !== 'string' || portfolio.name.length > 200) return 'Invalid portfolio name';
+    if (/[<>{}]/.test(portfolio.name)) return 'Portfolio name contains invalid characters';
+
+    // Allow string or number for value and returns
+    const isStrOrNum = (v: any) => typeof v === 'string' || typeof v === 'number';
+    if (!isStrOrNum(portfolio.value)) return 'Invalid portfolio value';
+
+    if (!portfolio.returns || typeof portfolio.returns !== 'object') return 'Invalid returns data';
+    const retFields = ['daily', 'monthly', 'sixMonths', 'yearly'];
+    if (retFields.some(f => !isStrOrNum(portfolio.returns[f]))) return 'Invalid return values';
+
+    if (model && (typeof model !== 'string' || model.length > 50)) return 'Invalid model';
+
+    return null;
 }
