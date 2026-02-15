@@ -9,7 +9,9 @@ export const aiSettings = {
         'gemini-flash-lite-latest',
         'gemini-flash-latest',
         'gemini-2.5-pro',
-        'gemini-2.5-flash-lite'
+        'gemini-2.5-flash-lite',
+        'gemini-2.0-flash-lite',
+        'gemini-2.0-flash'
     ],
 
     // The model to select by default. 
