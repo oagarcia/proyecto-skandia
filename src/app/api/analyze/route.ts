@@ -67,10 +67,13 @@ export async function POST(request: Request) {
                 newsSourceLabel = "FUENTE: YAHOO FINANCE (Configuración Específica)";
                 newsContext = ""; // Clear default context if any
 
-                for (const symbol of yahooSymbols) {
+                const newsDataPromises = yahooSymbols.map(async (symbol: string) => {
                     const data = await fetchYahooFinanceData(symbol);
-                    newsContext += `\n${data}\n`;
-                }
+                    return `\n${data}\n`;
+                });
+
+                const newsDataArray = await Promise.all(newsDataPromises);
+                newsContext = newsDataArray.join('');
 
             } else {
                 // Fallback to existing Google News Search
