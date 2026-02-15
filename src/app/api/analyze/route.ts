@@ -204,20 +204,6 @@ Rentabilidades:
         // If all failed
         console.error('All models failed. Last error:', lastError);
 
-        // DEBUG: Try to list available models to understand why
-        try {
-            const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-            const listData = await listResp.json();
-            console.log('DEBUG: Available models for this key:', JSON.stringify(listData, null, 2));
-
-            return NextResponse.json({
-                success: false,
-                error: `All models failed. Last error: ${lastError?.message}. Available models: ${listData.models?.map((m: any) => m.name).join(', ') || 'None found'}`
-            }, { status: 500 });
-        } catch (debugError) {
-            console.error('Failed to list models:', debugError);
-        }
-
         return NextResponse.json({
             success: false,
             error: `All models failed. Last error: ${lastError?.message || 'Unknown error'}`
