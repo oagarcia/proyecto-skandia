@@ -1,18 +1,43 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 
-export async function fetchYahooFinanceData(symbol: string): Promise<string> {
-    const mainUrl = `https://finance.yahoo.com/quote/${symbol}/`;
-    console.log(`[Yahoo Finance] Launching Puppeteer for ${symbol}...`);
-
-    let browser;
+// Function to fetch data for multiple symbols using a single browser instance
+export async function fetchYahooFinanceDataForSymbols(symbols: string[]): Promise<string> {
+    console.log(`[Yahoo Finance] Launching shared browser for ${symbols.length} symbols...`);
+    let browser: Browser | undefined;
     try {
         browser = await puppeteer.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         });
 
-        const page = await browser.newPage();
+        // Execute symbol scraping in parallel
+        const promises = symbols.map(symbol => fetchYahooDataWithBrowser(browser!, symbol));
+        const results = await Promise.all(promises);
+
+        return results.join('\n');
+    } catch (error: unknown) {
+        console.error('[Yahoo Finance] Error in shared browser session:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return `Error fetching data for symbols: ${errorMessage}`;
+    } finally {
+        if (browser) await browser.close();
+    }
+}
+
+// Wrapper for single symbol to maintain backward compatibility (if needed)
+export async function fetchYahooFinanceData(symbol: string): Promise<string> {
+    return fetchYahooFinanceDataForSymbols([symbol]);
+}
+
+
+async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Promise<string> {
+    const mainUrl = `https://finance.yahoo.com/quote/${symbol}/`;
+    console.log(`[Yahoo Finance] Processing ${symbol}...`);
+
+    let page;
+    try {
+        page = await browser.newPage();
 
         // Optimizar carga bloqueando recursos innecesarios
         await page.setRequestInterception(true);
@@ -25,72 +50,64 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
         });
 
         await page.setViewport({ width: 1280, height: 800 });
-        console.log(`[Yahoo Finance] Navigating to ${mainUrl}...`);
 
         // Timeout generoso para evitar fallos por red lenta
         await page.goto(mainUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        console.log('go to url -----------> ', mainUrl);
+        console.log(`[Yahoo Finance] Navigated to ${mainUrl}`);
 
         // Esperar selectores clave
         try {
-            // Esperamos a que aparezca al menos un streamer o el contenedor de precio
             await page.waitForSelector('fin-streamer[data-field="regularMarketPrice"]', { timeout: 15000 });
-            console.log('[Yahoo Finance] Price element found.');
-        } catch (e) {
-            console.log('[Yahoo Finance] Price/Header element wait timeout, trying to proceed...');
+        } catch {
+            console.log(`[Yahoo Finance] Price element wait timeout for ${symbol}, trying to proceed...`);
         }
 
-        const data = await page.evaluate((symbol) => {
-            let log = `\n--- INFORMACIÓN YAHOO FINANCE ---\n`;
+        // Use string evaluation to avoid transpilation issues (e.g. __name undefined)
+        // Interpolate symbol directly into the string IIFE
+        const data = await page.evaluate(`((symbol) => {
+            let log = "\\n--- INFORMACIÓN YAHOO FINANCE: " + symbol + " ---\\n";
 
-            // Extracción robusta usando selectores específicos de Yahoo Finance
-            // Estrategia 1: fin-streamer con data-symbol (más específico para evitar el sidebar)
-            const getStreamerValue = (field: string) => {
-                const el = document.querySelector(`fin-streamer[data-field="${field}"][data-symbol="${symbol}"]`);
-                return el ? el.textContent?.trim() : null;
+            const getStreamerValue = (field) => {
+                const el = document.querySelector('fin-streamer[data-field="' + field + '"][data-symbol="' + symbol + '"]');
+                return el ? el.textContent.trim() : null;
             };
 
-            // Estrategia 2: data-test="qsp-price" (Quote Summary Page Price)
             const getPriceByTestId = () => {
                 const el = document.querySelector('[data-test="qsp-price"]');
-                return el ? el.textContent?.trim() : null;
+                return el ? el.textContent.trim() : null;
             };
 
             let price = getStreamerValue('regularMarketPrice') || getPriceByTestId() || "N/A";
             const change = getStreamerValue('regularMarketChange') || "N/A";
             const pct = getStreamerValue('regularMarketChangePercent') || "N/A";
 
-            // Si el precio es N/A, intentamos buscar cualquier stream activo que coincida con el precio large
             if (price === "N/A") {
                 const mainPriceEl = document.querySelector('section[data-testid="quote-price"] fin-streamer[data-field="regularMarketPrice"]');
-                if (mainPriceEl) price = mainPriceEl.textContent?.trim() || "N/A";
+                if (mainPriceEl) price = (mainPriceEl.textContent && mainPriceEl.textContent.trim()) || "N/A";
             }
 
-            log += `PRECIO ACTUAL: ${price}\n`;
-            log += `CAMBIO: ${change} (${pct})\n\n`;
+            log += "PRECIO ACTUAL: " + price + "\\n";
+            log += "CAMBIO: " + change + " (" + pct + ")\\n\\n";
 
             return { log };
-        }, symbol);
+        })("${symbol}")`);
 
         let extractedText = data.log;
-        extractedText += `[Fuente Yahoo Finance](${mainUrl})\n`; // Link principal al final del bloque de precio
+        extractedText += `[Fuente Yahoo Finance](${mainUrl})\n`;
         extractedText += "NOTICIAS RECIENTES (Con detalle):\n";
 
         // Extracción de noticias
-        const newsLinks = await page.evaluate((maxNews) => {
-            const results: { title: string, url: string }[] = [];
-
-            // Buscar sección de noticias reciente
-            // Estrategia 1: data-testid="storyitem" (visto en debug)
-            // Estrategia 2: buscamos dentro de #news-bhfljgl2 o similar
+        const maxNews = yahooFinanceResearchConfig.settings?.maxNewsToAnalyze || 5;
+        const newsLinks = await page.evaluate(`((maxNews) => {
+            const results = [];
             const storyItems = document.querySelectorAll('[data-testid="storyitem"]');
 
             for (let item of Array.from(storyItems)) {
                 const titleEl = item.querySelector('h3');
-                const linkEl = item.querySelector('a') as HTMLAnchorElement | null;
+                const linkEl = item.querySelector('a');
 
                 if (titleEl && linkEl && linkEl.href) {
-                    const title = titleEl.textContent?.trim() || "";
+                    const title = titleEl.textContent ? titleEl.textContent.trim() : "";
                     const url = linkEl.href;
 
                     // Filtros básicos de calidad
@@ -101,14 +118,13 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
                 if (results.length >= maxNews) break;
             }
 
-            // Fallback: Si no hay storyitems, buscar enlaces generales en la sección de noticias
+            // Fallback
             if (results.length === 0) {
                 const newsSection = document.querySelector('[data-testid="recent-news"]');
                 if (newsSection) {
-                    const links = newsSection.querySelectorAll('h3 a, a h3'); // A veces el h3 está dentro del a, o al revés
+                    const links = newsSection.querySelectorAll('h3 a, a h3');
                     for (let el of Array.from(links)) {
-                        // Navegar al nodo A si tenemos el h3
-                        const aTag = (el.tagName === 'A' ? el : el.closest('a')) as HTMLAnchorElement | null;
+                        const aTag = (el.tagName === 'A' ? el : el.closest('a'));
                         if (aTag && aTag.href && aTag.textContent) {
                             results.push({
                                 title: aTag.textContent.trim(),
@@ -119,48 +135,50 @@ export async function fetchYahooFinanceData(symbol: string): Promise<string> {
                     }
                 }
             }
-
             return results;
-        }, yahooFinanceResearchConfig.settings?.maxNewsToAnalyze || 5);
+        })(${maxNews})`);
 
-        console.log(`[Yahoo Finance] Found ${newsLinks.length} news items.`);
+        console.log(`[Yahoo Finance] Found ${newsLinks.length} news items for ${symbol}.`);
 
-        // Deep Dive
-        for (const item of newsLinks) {
-            // Ignorar enlaces que no sean noticias reales (e.g. video, landing pages raras)
-            if (!item.url.includes('finance.yahoo.com/news') && !item.url.includes('finance.yahoo.com/m/')) {
-                continue;
-            }
+        // Close page before processing articles to save resources
+        await page.close();
 
-            console.log(`[Yahoo Finance] Scraping article: ${item.title}`);
-            extractedText += `\n### ${item.title}\n`; // Título sin enlace aquí
+        // Parallelize article scraping
+        const articlePromises = newsLinks
+            .filter((item: { url: string; title: string }) => item.url.includes('finance.yahoo.com/news') || item.url.includes('finance.yahoo.com/m/'))
+            .map(async (item: { url: string; title: string }) => {
+                 console.log(`[Yahoo Finance] Scraping article: ${item.title}`);
+                 let content = `\n### ${item.title}\n`;
+                 try {
+                     content += await scrapeArticleContent(browser, item.url);
+                 } catch (e) {
+                     console.error('[Yahoo Finance] Error scraping article detail', e);
+                     content += `(No se pudo cargar el detalle)\n [Fuente](${item.url})\n`;
+                 }
+                 return content;
+            });
 
-            try {
-                extractedText += await scrapeArticleContent(browser, item.url);
-            } catch (e) {
-                console.error('[Yahoo Finance] Error scraping article detail', e);
-                extractedText += `(No se pudo cargar el detalle)\n [Fuente](${item.url})\n`;
-            }
-        }
+        const articleResults = await Promise.all(articlePromises);
+        extractedText += articleResults.join('');
 
         if (newsLinks.length === 0) {
             extractedText += "No se encontraron noticias recientes automáticamente.\n";
         }
 
-        await browser.close();
         return extractedText;
 
-    } catch (error: any) {
-        if (browser) await browser.close();
+    } catch (error: unknown) {
+        if (page && !page.isClosed()) await page.close().catch(() => {});
         console.error(`[Yahoo Finance] Error scraping ${symbol}:`, error);
-        return `Error recuperando información para ${symbol} (Puppeteer): ${error.message}`;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return `Error recuperando información para ${symbol}: ${errorMessage}`;
     }
 }
 
-async function scrapeArticleContent(browser: any, url: string): Promise<string> {
+async function scrapeArticleContent(browser: Browser, url: string): Promise<string> {
     const page = await browser.newPage();
     await page.setRequestInterception(true);
-    page.on('request', (req: any) => {
+    page.on('request', (req) => {
         if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
             req.abort();
         } else {
@@ -170,33 +188,30 @@ async function scrapeArticleContent(browser: any, url: string): Promise<string> 
 
     try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        // console.log('go to article url -----------> ', url);
 
-        console.log('go to article url -----------> ', url);
-
-        const summary = await page.evaluate(() => {
-            // Yahoo news articles typically use class 'caas-body'
+        const summary = await page.evaluate(`(() => {
             const body = document.querySelector('.caas-body');
             if (body) {
                 const paragraphs = Array.from(body.querySelectorAll('p'));
                 return paragraphs
-                    .map(p => p.textContent?.trim() || "")
+                    .map(p => p.textContent ? p.textContent.trim() : "")
                     .filter(t => t.length > 50)
-                    .slice(0, 5) // Top 5 paragraphs
-                    .join('\n\n');
+                    .slice(0, 5)
+                    .join('\\n\\n');
             }
-            // Fallback generic
             const paragraphs = Array.from(document.querySelectorAll('article p, .body p'));
-            return paragraphs.map(p => p.textContent?.trim()).slice(0, 4).join('\n\n');
-        });
+            return paragraphs.map(p => p.textContent ? p.textContent.trim() : "").slice(0, 4).join('\\n\\n');
+        })()`);
 
         await page.close();
-        if (summary && summary.length > 0) {
-            return `Resumen:\n> ${summary.replace(/\n/g, '\n> ')}\n\n[Fuente Noticia](${url})\n`;
+        if (summary && (summary as string).length > 0) {
+            return `Resumen:\n> ${(summary as string).replace(/\n/g, '\n> ')}\n\n[Fuente Noticia](${url})\n`;
         }
         return `(Sin contenido extraíble)\n\n[Fuente Noticia](${url})\n`;
 
-    } catch (e) {
-        if (page) await page.close();
+    } catch {
+        if (page && !page.isClosed()) await page.close().catch(() => {});
         return "(Error cargando artículo)\n";
     }
 }
