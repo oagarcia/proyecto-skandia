@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { getPortfolioPdf } from '@/lib/pdf-scraper';
 import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
-import { fetchYahooFinanceData } from '@/lib/yahoo-finance';
+import { fetchYahooFinanceDataForSymbols } from '@/lib/yahoo-finance';
 import { validatePortfolio } from '@/lib/validation';
 
 export async function POST(request: Request) {
@@ -24,11 +24,25 @@ export async function POST(request: Request) {
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Fetch PDF (Ficha Técnica)
+        // --- PARALLEL FETCHING START ---
+        // 1. Start Fetching PDF (Ficha Técnica)
         console.log(`[Analysis] Fetching PDF for ${portfolio.name}...`);
-        const { pdfBase64, pdfUrl } = await getPortfolioPdf(portfolio.name);
+        const pdfPromise = getPortfolioPdf(portfolio.name);
 
-        // 3. Obtener noticias en tiempo real (Manual Scraper)
+        // 2. Start Yahoo Finance Research if configured
+        let yahooPromise: Promise<string> | null = null;
+        // @ts-expect-error - yahooFinanceResearchConfig type might not match exact structure but it works
+        const yahooSymbols = yahooFinanceResearchConfig.portfolios[portfolio.name];
+
+        if (yahooSymbols && Array.isArray(yahooSymbols) && yahooSymbols.length > 0) {
+            console.log(`[Analyze API] Yahoo Finance configuration found for ${portfolio.name}:`, yahooSymbols);
+            yahooPromise = fetchYahooFinanceDataForSymbols(yahooSymbols);
+        }
+
+        // --- AWAIT RESULTS ---
+        // We await the PDF result first as it might be needed for fallback logic
+        const { pdfBase64, pdfUrl } = await pdfPromise;
+
         let newsContext = "";
         let newsSourceLabel = "CONTEXTO DE NOTICIAS RECIENTES (Obtenido vía Google News)";
         let extractedHoldings: string[] = [];
@@ -45,39 +59,32 @@ export async function POST(request: Request) {
                 }
             }
 
-            // Construct search query
-            let query = "";
-            if (extractedHoldings.length > 0) {
-                // Use top 5 holdings for the search query with OR operator
-                // Example: "Holding 1" OR "Holding 2" OR "Holding 3"
-                const topHoldings = extractedHoldings.slice(0, 5).map(h => `"${h}"`).join(' OR ');
-                query = `${topHoldings}`;
-            } else {
-                // Fallback query
-                query = `Skandia Colombia "${portfolio.name}" economia mercado`;
+            // Check Yahoo Promise Result
+            if (yahooPromise) {
+                const yahooResult = await yahooPromise;
+                if (!yahooResult.startsWith("Error")) {
+                    newsContext = yahooResult;
+                    newsSourceLabel = "FUENTE: YAHOO FINANCE (Configuración Específica)";
+                } else {
+                    console.warn('[Analyze API] Yahoo Finance fetch failed/error, falling back to Google News:', yahooResult);
+                }
             }
 
+            // Fallback to Google News if Yahoo was not configured or failed
+            if (!newsContext) {
+                // Construct search query
+                let query = "";
+                if (extractedHoldings.length > 0) {
+                    // Use top 5 holdings for the search query with OR operator
+                    // Example: "Holding 1" OR "Holding 2" OR "Holding 3"
+                    const topHoldings = extractedHoldings.slice(0, 5).map(h => `"${h}"`).join(' OR ');
+                    query = `${topHoldings}`;
+                } else {
+                    // Fallback query
+                    query = `Skandia Colombia "${portfolio.name}" economia mercado`;
+                }
 
-            // 3b. Yahoo Finance Research (Config Check)
-            // @ts-ignore
-            const yahooSymbols = yahooFinanceResearchConfig.portfolios[portfolio.name];
-
-            if (yahooSymbols && Array.isArray(yahooSymbols) && yahooSymbols.length > 0) {
-                console.log(`[Analyze API] Yahoo Finance configuration found for ${portfolio.name}:`, yahooSymbols);
-                newsSourceLabel = "FUENTE: YAHOO FINANCE (Configuración Específica)";
-                newsContext = ""; // Clear default context if any
-
-                const newsDataPromises = yahooSymbols.map(async (symbol: string) => {
-                    const data = await fetchYahooFinanceData(symbol);
-                    return `\n${data}\n`;
-                });
-
-                const newsDataArray = await Promise.all(newsDataPromises);
-                newsContext = newsDataArray.join('');
-
-            } else {
-                // Fallback to existing Google News Search
-                console.log(`[Analyze API] No Yahoo config. Fetching Google news for query: ${query} `);
+                console.log(`[Analyze API] Fetching Google news for query: ${query} `);
                 newsContext = await searchGoogleNews(query);
 
                 if (!newsContext || newsContext.length < 50) {
@@ -116,7 +123,7 @@ Rentabilidades:
 - Anual(YTD): ${portfolio.returns.yearly}
 `;
 
-        const parts: any[] = [];
+        const parts: Part[] = [];
 
         if (pdfBase64) {
             console.log('[Analysis] PDF fetched successfully. Attaching to prompt.');
@@ -204,8 +211,9 @@ Rentabilidades:
                     pdfUrl: pdfUrl
                 });
 
-            } catch (error: any) {
-                console.warn(`Failed with model ${modelName}: `, error.message);
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.warn(`Failed with model ${modelName}: `, errorMessage);
                 lastError = error;
                 // Continue to next model
             }
@@ -220,7 +228,7 @@ Rentabilidades:
             error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
         }, { status: 500 });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Gemini API Error:', error);
         return NextResponse.json({
             success: false,
