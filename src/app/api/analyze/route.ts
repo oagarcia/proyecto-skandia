@@ -5,6 +5,7 @@ import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import { fetchYahooFinanceData } from '@/lib/yahoo-finance';
+import { validatePortfolio } from '@/lib/validation';
 
 export async function POST(request: Request) {
     try {
@@ -12,6 +13,12 @@ export async function POST(request: Request) {
 
         if (!apiKey) {
             return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
+        }
+
+        // Input validation
+        const validation = validatePortfolio(portfolio);
+        if (!validation.valid) {
+            return NextResponse.json({ success: false, error: validation.error }, { status: 400 });
         }
 
         // Initialize Gemini
@@ -207,30 +214,17 @@ Rentabilidades:
         // If all failed
         console.error('All models failed. Last error:', lastError);
 
-        // DEBUG: Try to list available models to understand why
-        try {
-            const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-            const listData = await listResp.json();
-            console.log('DEBUG: Available models for this key:', JSON.stringify(listData, null, 2));
-
-            return NextResponse.json({
-                success: false,
-                error: `All models failed. Last error: ${lastError?.message}. Available models: ${listData.models?.map((m: any) => m.name).join(', ') || 'None found'}`
-            }, { status: 500 });
-        } catch (debugError) {
-            console.error('Failed to list models:', debugError);
-        }
-
+        // SECURE ERROR HANDLING: Avoid leaking model lists or internal error details
         return NextResponse.json({
             success: false,
-            error: `All models failed. Last error: ${lastError?.message || 'Unknown error'}`
+            error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
         }, { status: 500 });
 
     } catch (error: any) {
         console.error('Gemini API Error:', error);
         return NextResponse.json({
             success: false,
-            error: error.message || 'Failed to generate analysis'
+            error: 'An internal error occurred during analysis generation.'
         }, { status: 500 });
     }
 }
