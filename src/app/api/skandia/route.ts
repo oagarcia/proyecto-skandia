@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
+import { isValidDate } from '@/lib/validation';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -9,8 +10,22 @@ export async function GET(request: Request) {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    const from = searchParams.get('from') || firstDay;
-    const to = searchParams.get('to') || lastDay;
+    let from = searchParams.get('from');
+    let to = searchParams.get('to');
+
+    if (from && !isValidDate(from)) {
+        return NextResponse.json({ success: false, error: 'Invalid "from" date format. Use YYYY-MM-DD.' }, { status: 400 });
+    }
+    if (to && !isValidDate(to)) {
+        return NextResponse.json({ success: false, error: 'Invalid "to" date format. Use YYYY-MM-DD.' }, { status: 400 });
+    }
+
+    if (from && to && from > to) {
+        return NextResponse.json({ success: false, error: '"from" date cannot be after "to" date.' }, { status: 400 });
+    }
+
+    from = from || firstDay;
+    to = to || lastDay;
 
     let browser;
 
