@@ -6,3 +6,7 @@
 **Vulnerability:** Inconsistent date validation logic leading to potential bypass or application errors.
 **Learning:** JavaScript's `new Date('YYYY-MM-DD')` parses as UTC midnight. However, `date.getDate()` and other getters operate in the local system timezone. If the server runs in a timezone behind UTC (e.g., EST/COT), `2023-01-01` (UTC) becomes `2022-12-31` (Local), causing simple component comparison checks (year/month/day) to fail unexpectedly or behave inconsistently across environments.
 **Prevention:** When validating strictly formatted date strings (like `YYYY-MM-DD`), always use UTC accessors (`getUTCFullYear`, `getUTCMonth`, `getUTCDate`) to ensure the components match the input string regardless of the server's timezone.
+## 2025-05-24 - Puppeteer Execution Context Injection
+**Vulnerability:** String interpolation of user input directly into `page.evaluate` strings (e.g., `page.evaluate("console.log('" + userInput + "')")`).
+**Learning:** This pattern allows arbitrary code execution within the browser context if `userInput` contains malicious JS (e.g., `'); alert(1); //`). In `src/lib/yahoo-finance.ts`, symbol inputs were interpolated this way.
+**Prevention:** Pass arguments safely to `page.evaluate` as the second argument: `page.evaluate((symbol) => { ... }, symbol)`. This serializes the data safely instead of interpreting it as code.

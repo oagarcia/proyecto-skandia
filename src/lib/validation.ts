@@ -11,6 +11,11 @@ export interface Portfolio {
   };
 }
 
+export const MAX_NAME_LENGTH = 100;
+export const MAX_TYPE_LENGTH = 50;
+export const MAX_RISK_LENGTH = 50;
+export const MAX_RETURN_LENGTH = 20;
+
 export function validatePortfolio(data: unknown): { valid: boolean; error?: string } {
   if (!data || typeof data !== 'object') {
     return { valid: false, error: 'Invalid portfolio data: must be an object' };
@@ -28,10 +33,20 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
   if (typeof obj.name !== 'string' || obj.name.trim() === '') {
     return { valid: false, error: 'Invalid name' };
   }
+  if (obj.name.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `Name exceeds maximum length of ${MAX_NAME_LENGTH}` };
+  }
 
   // Basic type checks
   if (typeof obj.type !== 'string') return { valid: false, error: 'Invalid type' };
+  if (obj.type.length > MAX_TYPE_LENGTH) {
+    return { valid: false, error: `Type exceeds maximum length of ${MAX_TYPE_LENGTH}` };
+  }
+
   if (typeof obj.risk !== 'string') return { valid: false, error: 'Invalid risk' };
+  if (obj.risk.length > MAX_RISK_LENGTH) {
+    return { valid: false, error: `Risk exceeds maximum length of ${MAX_RISK_LENGTH}` };
+  }
 
   if (typeof obj.value !== 'string' && typeof obj.value !== 'number') {
     return { valid: false, error: 'Invalid value: must be string or number' };
@@ -46,6 +61,13 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
   for (const field of returnFields) {
     if (!(field in returnsObj)) {
       return { valid: false, error: `Missing return field: ${field}` };
+    }
+    const val = returnsObj[field];
+    if (typeof val !== 'string') {
+        return { valid: false, error: `Return field ${field} must be a string` };
+    }
+    if (val.length > MAX_RETURN_LENGTH) {
+        return { valid: false, error: `Return field ${field} exceeds maximum length of ${MAX_RETURN_LENGTH}` };
     }
   }
 
