@@ -2,14 +2,21 @@ import puppeteer, { Browser } from 'puppeteer';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 
 // Function to fetch data for multiple symbols using a single browser instance
-export async function fetchYahooFinanceDataForSymbols(symbols: string[]): Promise<string> {
-    console.log(`[Yahoo Finance] Launching shared browser for ${symbols.length} symbols...`);
-    let browser: Browser | undefined;
+export async function fetchYahooFinanceDataForSymbols(symbols: string[], browserInstance?: Browser): Promise<string> {
+    let browser = browserInstance;
+    let ownBrowser = false;
+
     try {
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-        });
+        if (!browser) {
+            console.log(`[Yahoo Finance] Launching shared browser for ${symbols.length} symbols...`);
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            });
+            ownBrowser = true;
+        } else {
+            console.log(`[Yahoo Finance] Using shared browser instance for ${symbols.length} symbols...`);
+        }
 
         // Execute symbol scraping in parallel
         const promises = symbols.map(symbol => fetchYahooDataWithBrowser(browser!, symbol));
@@ -21,13 +28,13 @@ export async function fetchYahooFinanceDataForSymbols(symbols: string[]): Promis
         const errorMessage = error instanceof Error ? error.message : String(error);
         return `Error fetching data for symbols: ${errorMessage}`;
     } finally {
-        if (browser) await browser.close();
+        if (ownBrowser && browser) await browser.close();
     }
 }
 
 // Wrapper for single symbol to maintain backward compatibility (if needed)
-export async function fetchYahooFinanceData(symbol: string): Promise<string> {
-    return fetchYahooFinanceDataForSymbols([symbol]);
+export async function fetchYahooFinanceData(symbol: string, browserInstance?: Browser): Promise<string> {
+    return fetchYahooFinanceDataForSymbols([symbol], browserInstance);
 }
 
 
