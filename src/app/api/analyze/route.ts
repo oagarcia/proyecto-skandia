@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import puppeteer, { Browser } from 'puppeteer';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { getPortfolioPdf } from '@/lib/pdf-scraper';
 import { searchGoogleNews } from '@/lib/news-scraper';
@@ -8,6 +9,7 @@ import { fetchYahooFinanceDataForSymbols } from '@/lib/yahoo-finance';
 import { validatePortfolio, validateApiKey } from '@/lib/validation';
 
 export async function POST(request: Request) {
+    let browser: Browser | null = null;
     try {
         const { portfolio, apiKey, model: selectedModel } = await request.json();
 
@@ -29,10 +31,21 @@ export async function POST(request: Request) {
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
 
+        // Launch Browser Shared Instance
+        try {
+            console.log('[Analyze API] Launching shared browser instance...');
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            });
+        } catch (e) {
+            console.warn('[Analyze API] Failed to launch shared browser, falling back to individual instances:', e);
+        }
+
         // --- PARALLEL FETCHING START ---
         // 1. Start Fetching PDF (Ficha Técnica)
         console.log(`[Analysis] Fetching PDF for ${portfolio.name}...`);
-        const pdfPromise = getPortfolioPdf(portfolio.name);
+        const pdfPromise = getPortfolioPdf(portfolio.name, browser || undefined);
 
         // 2. Start Yahoo Finance Research if configured
         let yahooPromise: Promise<string> | null = null;
@@ -41,7 +54,7 @@ export async function POST(request: Request) {
 
         if (yahooSymbols && Array.isArray(yahooSymbols) && yahooSymbols.length > 0) {
             console.log(`[Analyze API] Yahoo Finance configuration found for ${portfolio.name}:`, yahooSymbols);
-            yahooPromise = fetchYahooFinanceDataForSymbols(yahooSymbols);
+            yahooPromise = fetchYahooFinanceDataForSymbols(yahooSymbols, browser || undefined);
         }
 
         // --- AWAIT RESULTS ---
@@ -90,7 +103,7 @@ export async function POST(request: Request) {
                 }
 
                 console.log(`[Analyze API] Fetching Google news for query: ${query} `);
-                newsContext = await searchGoogleNews(query);
+                newsContext = await searchGoogleNews(query, browser || undefined);
 
                 if (!newsContext || newsContext.length < 50) {
                     console.log('[Analyze API] No specific news found, trying broader query...');
@@ -102,7 +115,7 @@ export async function POST(request: Request) {
                         console.log(`[Analyze API] Using first holding for fallback: ${broadQuery}`);
                     }
 
-                    newsContext = await searchGoogleNews(broadQuery);
+                    newsContext = await searchGoogleNews(broadQuery, browser || undefined);
                 }
             }
 
@@ -239,5 +252,10 @@ Rentabilidades:
             success: false,
             error: 'An internal error occurred during analysis generation.'
         }, { status: 500 });
+    } finally {
+        if (browser) {
+            console.log('[Analyze API] Closing shared browser instance...');
+            await browser.close().catch(e => console.error('Error closing browser:', e));
+        }
     }
 }

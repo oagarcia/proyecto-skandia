@@ -1,13 +1,22 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
 
-export async function searchGoogleNews(query: string): Promise<string> {
+export async function searchGoogleNews(query: string, browserInstance?: Browser): Promise<string> {
     console.log(`[News Scraper] Searching for: ${query}`);
-    let browser;
+    let browser = browserInstance;
+    let ownBrowser = false;
+
     try {
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        if (!browser) {
+            console.log(`[News Scraper] Launching new browser...`);
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            ownBrowser = true;
+        } else {
+            console.log(`[News Scraper] Using shared browser instance...`);
+        }
+
         const page = await browser.newPage();
 
         // Set a real User-Agent to avoid being served old/mobile versions
@@ -60,6 +69,6 @@ export async function searchGoogleNews(query: string): Promise<string> {
         console.error('[News Scraper] Error fetching news:', error);
         return "No se pudieron obtener noticias en tiempo real debido a un error técnico.";
     } finally {
-        if (browser) await browser.close();
+        if (ownBrowser && browser) await browser.close();
     }
 }

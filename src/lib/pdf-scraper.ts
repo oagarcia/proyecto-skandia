@@ -1,13 +1,21 @@
-import puppeteer, { Browser, Target } from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
 
-export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase64: string | null, pdfUrl: string | null }> {
-    let browser: Browser | undefined;
+export async function getPortfolioPdf(portfolioName: string, browserInstance?: Browser): Promise<{ pdfBase64: string | null, pdfUrl: string | null }> {
+    let browser = browserInstance;
+    let ownBrowser = false;
+
     try {
-        console.log(`[PDF Scraper] Launching browser for ${portfolioName}...`);
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        });
+        if (!browser) {
+            console.log(`[PDF Scraper] Launching browser for ${portfolioName}...`);
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            });
+            ownBrowser = true;
+        } else {
+            console.log(`[PDF Scraper] Using shared browser instance for ${portfolioName}...`);
+        }
+
         const page = await browser.newPage();
 
         // Navigate
@@ -114,6 +122,6 @@ export async function getPortfolioPdf(portfolioName: string): Promise<{ pdfBase6
         console.error('[PDF Scraper] Error:', error);
         return { pdfBase64: null, pdfUrl: null };
     } finally {
-        if (browser) await browser.close();
+        if (ownBrowser && browser) await browser.close();
     }
 }
