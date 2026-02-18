@@ -5,7 +5,7 @@ import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import { fetchYahooFinanceDataForSymbols } from '@/lib/yahoo-finance';
-import { validatePortfolio } from '@/lib/validation';
+import { validatePortfolio, validateApiKey } from '@/lib/validation';
 
 export async function POST(request: Request) {
     try {
@@ -13,6 +13,11 @@ export async function POST(request: Request) {
 
         if (!apiKey) {
             return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
+        }
+
+        const apiKeyValidation = validateApiKey(apiKey);
+        if (!apiKeyValidation.valid) {
+            return NextResponse.json({ success: false, error: apiKeyValidation.error }, { status: 400 });
         }
 
         // Input validation
