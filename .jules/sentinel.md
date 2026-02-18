@@ -6,3 +6,7 @@
 **Vulnerability:** Inconsistent date validation logic leading to potential bypass or application errors.
 **Learning:** JavaScript's `new Date('YYYY-MM-DD')` parses as UTC midnight. However, `date.getDate()` and other getters operate in the local system timezone. If the server runs in a timezone behind UTC (e.g., EST/COT), `2023-01-01` (UTC) becomes `2022-12-31` (Local), causing simple component comparison checks (year/month/day) to fail unexpectedly or behave inconsistently across environments.
 **Prevention:** When validating strictly formatted date strings (like `YYYY-MM-DD`), always use UTC accessors (`getUTCFullYear`, `getUTCMonth`, `getUTCDate`) to ensure the components match the input string regardless of the server's timezone.
+## 2025-05-24 - Ghost Validation Discrepancy
+**Vulnerability:** Documentation and team memory claimed strict input length validation existed in `src/lib/validation.ts`, but the actual code only performed basic type checks, leaving the application vulnerable to DoS via large payloads.
+**Learning:** Security controls described in documentation or memory may be outdated or hallucinated. "Trust but verify" must apply to internal documentation as much as user input.
+**Prevention:** Always audit the actual implementation of security controls before assuming they exist, especially for critical validation logic.

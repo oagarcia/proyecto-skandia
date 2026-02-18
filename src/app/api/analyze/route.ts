@@ -5,14 +5,14 @@ import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import { fetchYahooFinanceDataForSymbols } from '@/lib/yahoo-finance';
-import { validatePortfolio } from '@/lib/validation';
+import { validatePortfolio, validateApiKey } from '@/lib/validation';
 
 export async function POST(request: Request) {
     try {
         const { portfolio, apiKey, model: selectedModel } = await request.json();
 
-        if (!apiKey) {
-            return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
+        if (!apiKey || !validateApiKey(apiKey)) {
+            return NextResponse.json({ success: false, error: 'Invalid API Key format' }, { status: 400 });
         }
 
         // Input validation

@@ -11,6 +11,14 @@ export interface Portfolio {
   };
 }
 
+// Security constants
+const MAX_NAME_LENGTH = 100;
+const MAX_TYPE_LENGTH = 50;
+const MAX_RISK_LENGTH = 50;
+const MAX_RETURNS_LENGTH = 20;
+// Google API Key Regex: Starts with AIza, followed by 35 alphanumeric characters (including - and _)
+const GOOGLE_API_KEY_REGEX = /^AIza[0-9A-Za-z\-_]{35}$/;
+
 export function validatePortfolio(data: unknown): { valid: boolean; error?: string } {
   if (!data || typeof data !== 'object') {
     return { valid: false, error: 'Invalid portfolio data: must be an object' };
@@ -28,10 +36,16 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
   if (typeof obj.name !== 'string' || obj.name.trim() === '') {
     return { valid: false, error: 'Invalid name' };
   }
+  if (obj.name.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `Name exceeds maximum length of ${MAX_NAME_LENGTH}` };
+  }
 
-  // Basic type checks
+  // Basic type checks and length checks
   if (typeof obj.type !== 'string') return { valid: false, error: 'Invalid type' };
+  if (obj.type.length > MAX_TYPE_LENGTH) return { valid: false, error: `Type exceeds maximum length of ${MAX_TYPE_LENGTH}` };
+
   if (typeof obj.risk !== 'string') return { valid: false, error: 'Invalid risk' };
+  if (obj.risk.length > MAX_RISK_LENGTH) return { valid: false, error: `Risk exceeds maximum length of ${MAX_RISK_LENGTH}` };
 
   if (typeof obj.value !== 'string' && typeof obj.value !== 'number') {
     return { valid: false, error: 'Invalid value: must be string or number' };
@@ -47,9 +61,21 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
     if (!(field in returnsObj)) {
       return { valid: false, error: `Missing return field: ${field}` };
     }
+    const val = returnsObj[field];
+    if (typeof val !== 'string') {
+        return { valid: false, error: `Return field ${field} must be a string` };
+    }
+    if (val.length > MAX_RETURNS_LENGTH) {
+        return { valid: false, error: `Return field ${field} exceeds max length of ${MAX_RETURNS_LENGTH}` };
+    }
   }
 
   return { valid: true };
+}
+
+export function validateApiKey(key: string): boolean {
+    if (!key || typeof key !== 'string') return false;
+    return GOOGLE_API_KEY_REGEX.test(key);
 }
 
 export function isValidDate(dateString: string): boolean {
