@@ -97,7 +97,7 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
             log += "CAMBIO: " + change + " (" + pct + ")\\n\\n";
 
             return { log };
-        })("${symbol}")`);
+        })(${JSON.stringify(symbol)})`) as { log: string };
 
         let extractedText = data.log;
         extractedText += `[Fuente Yahoo Finance](${mainUrl})\n`;
@@ -143,7 +143,7 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
                 }
             }
             return results;
-        })(${maxNews})`);
+        })(${JSON.stringify(maxNews)})`) as { title: string; url: string }[];
 
         console.log(`[Yahoo Finance] Found ${newsLinks.length} news items for ${symbol}.`);
 
