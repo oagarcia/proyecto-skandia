@@ -53,7 +53,7 @@ export async function GET(request: Request) {
             await page.waitForSelector('#variacionCb', { timeout: 5000 });
             await page.click('#variacionCb');
             // Wait for the change to trigger (it has an onclick handler)
-            await new Promise(r => setTimeout(r, 2000));
+            await page.waitForNetworkIdle({ idleTime: 500, timeout: 5000 }).catch(() => {});
         } catch (e) {
             console.warn('Could not click "Variación Unidad" radio button:', e);
         }
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
             await page.waitForSelector('.calcularButton', { timeout: 5000 });
             await page.click('.calcularButton');
             // Wait for data reload
-            await new Promise(r => setTimeout(r, 3000));
+            await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => {});
         } catch (e) {
             console.log('Calculate button not found or click failed', e);
         }
