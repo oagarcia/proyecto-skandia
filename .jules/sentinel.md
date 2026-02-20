@@ -10,3 +10,8 @@
 **Vulnerability:** The application accepted unbounded string inputs (e.g., `portfolio.name`) which were directly injected into LLM prompts and logs. This posed a Denial of Service (DoS) risk via massive payloads and increased the surface area for Prompt Injection attacks.
 **Learning:** Checking `typeof string` is insufficient for security. Malicious actors can send multi-megabyte strings to exhaust server memory or confuse AI models. Input validation must always include strict length limits and character allowlists where appropriate.
 **Prevention:** Enforce `MAX_LENGTH` constants for all string inputs at the validation layer (`src/lib/validation.ts`) before any processing occurs. Validate format (e.g., regex) for specific fields like API keys.
+
+## 2025-05-25 - Unvalidated External API Calls
+**Vulnerability:** The `/api/models` endpoint accepted an `apiKey` from the client and used it directly in a `fetch` call to Google's API without validation or encoding. This exposed the application to potential parameter injection or malformed requests.
+**Learning:** Even when calling trusted third-party APIs (like Google), input parameters must be treated as untrusted. Relying on the third-party to return an error is insufficient; the application must validate inputs *before* making the request to prevent abuse and ensure predictable behavior.
+**Prevention:** Always validate and sanitize (e.g., `encodeURIComponent`) all user-provided data before using it in external API calls. Reuse existing validation logic (like `validateApiKey`) across all endpoints that consume similar data.
