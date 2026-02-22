@@ -114,3 +114,27 @@ export function isValidDate(dateString: string): boolean {
 
   return true;
 }
+
+export const ALLOWED_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.5-pro',
+  'gemini-flash-latest'
+];
+
+export function validateModel(model: unknown): { valid: boolean; error?: string } {
+  // If model is not provided (undefined or null or empty), it's considered valid (fallback will be used by caller)
+  if (model === undefined || model === null || model === '') {
+    return { valid: true };
+  }
+
+  if (typeof model !== 'string') {
+    return { valid: false, error: 'Model name must be a string' };
+  }
+
+  if (!ALLOWED_MODELS.includes(model)) {
+    return { valid: false, error: `Invalid model name. Allowed models: ${ALLOWED_MODELS.join(', ')}` };
+  }
+
+  return { valid: true };
+}

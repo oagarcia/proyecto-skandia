@@ -6,7 +6,7 @@ import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import { fetchYahooFinanceDataForSymbols } from '@/lib/yahoo-finance';
-import { validatePortfolio, validateApiKey } from '@/lib/validation';
+import { validatePortfolio, validateApiKey, validateModel, ALLOWED_MODELS } from '@/lib/validation';
 
 export async function POST(request: Request) {
     let browser: Browser | null = null;
@@ -20,6 +20,11 @@ export async function POST(request: Request) {
         const apiKeyValidation = validateApiKey(apiKey);
         if (!apiKeyValidation.valid) {
             return NextResponse.json({ success: false, error: apiKeyValidation.error }, { status: 400 });
+        }
+
+        const modelValidation = validateModel(selectedModel);
+        if (!modelValidation.valid) {
+            return NextResponse.json({ success: false, error: modelValidation.error }, { status: 400 });
         }
 
         // Input validation
@@ -201,12 +206,7 @@ Rentabilidades:
 
         // Determine which model to use
         // If selectedModel is provided, use it. Otherwise fallback to list.
-        const modelsToTry = selectedModel ? [selectedModel] : [
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
-            'gemini-2.5-pro',
-            'gemini-flash-latest'
-        ];
+        const modelsToTry = selectedModel ? [selectedModel] : ALLOWED_MODELS;
 
         let lastError;
 
