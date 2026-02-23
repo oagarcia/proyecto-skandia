@@ -30,19 +30,32 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
     }
   }
 
+  // Regex for safe text (Alphanumeric, spaces, basic punctuation, Spanish accents)
+  // We explicitly use space ' ' instead of \s to prevent newlines/tabs which could be used for prompt injection
+  const safeTextRegex = /^[\w .,\-()áéíóúñÁÉÍÓÚÑ']+$/;
+
   if (typeof obj.name !== 'string' || obj.name.trim() === '') {
     return { valid: false, error: 'Invalid name' };
   }
   if (obj.name.length > MAX_NAME_LENGTH) {
     return { valid: false, error: `Name exceeds max length of ${MAX_NAME_LENGTH}` };
   }
+  if (!safeTextRegex.test(obj.name)) {
+    return { valid: false, error: 'Name contains invalid characters' };
+  }
 
   // Basic type checks
   if (typeof obj.type !== 'string') return { valid: false, error: 'Invalid type' };
   if (obj.type.length > MAX_TYPE_LENGTH) return { valid: false, error: `Type exceeds max length of ${MAX_TYPE_LENGTH}` };
+  if (!safeTextRegex.test(obj.type)) {
+    return { valid: false, error: 'Type contains invalid characters' };
+  }
 
   if (typeof obj.risk !== 'string') return { valid: false, error: 'Invalid risk' };
   if (obj.risk.length > MAX_RISK_LENGTH) return { valid: false, error: `Risk exceeds max length of ${MAX_RISK_LENGTH}` };
+  if (!safeTextRegex.test(obj.risk)) {
+    return { valid: false, error: 'Risk contains invalid characters' };
+  }
 
   if (typeof obj.value !== 'string' && typeof obj.value !== 'number') {
     return { valid: false, error: 'Invalid value: must be string or number' };

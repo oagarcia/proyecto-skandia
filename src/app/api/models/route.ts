@@ -1,5 +1,6 @@
 
 import { NextResponse } from 'next/server';
+import { validateApiKey } from '@/lib/validation';
 
 export async function POST(request: Request) {
     try {
@@ -9,8 +10,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: 'API Key is required' }, { status: 400 });
         }
 
+        const apiKeyValidation = validateApiKey(apiKey);
+        if (!apiKeyValidation.valid) {
+            return NextResponse.json({ success: false, error: apiKeyValidation.error }, { status: 400 });
+        }
+
         // Fetch models from Google Generative AI API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
+        url.searchParams.append('key', apiKey);
+
+        const response = await fetch(url.toString());
 
         if (!response.ok) {
             const errorData = await response.json();
