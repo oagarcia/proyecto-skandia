@@ -6,7 +6,7 @@ import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import { fetchYahooFinanceDataForSymbols } from '@/lib/yahoo-finance';
-import { validatePortfolio, validateApiKey } from '@/lib/validation';
+import { validatePortfolio, validateApiKey, validateModel } from '@/lib/validation';
 
 export async function POST(request: Request) {
     let browser: Browser | null = null;
@@ -20,6 +20,11 @@ export async function POST(request: Request) {
         const apiKeyValidation = validateApiKey(apiKey);
         if (!apiKeyValidation.valid) {
             return NextResponse.json({ success: false, error: apiKeyValidation.error }, { status: 400 });
+        }
+
+        const modelValidation = validateModel(selectedModel);
+        if (!modelValidation.valid) {
+            return NextResponse.json({ success: false, error: modelValidation.error }, { status: 400 });
         }
 
         // Input validation

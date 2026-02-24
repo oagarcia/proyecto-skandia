@@ -15,3 +15,8 @@
 **Vulnerability:** The `/api/models` endpoint accepted an `apiKey` from the client and used it directly in a `fetch` call to Google's API without validation or encoding. This exposed the application to potential parameter injection or malformed requests.
 **Learning:** Even when calling trusted third-party APIs (like Google), input parameters must be treated as untrusted. Relying on the third-party to return an error is insufficient; the application must validate inputs *before* making the request to prevent abuse and ensure predictable behavior.
 **Prevention:** Always validate and sanitize (e.g., `encodeURIComponent`) all user-provided data before using it in external API calls. Reuse existing validation logic (like `validateApiKey`) across all endpoints that consume similar data.
+
+## 2025-05-25 - Unvalidated Model Selection in AI Endpoints
+**Vulnerability:** The `/api/analyze` endpoint accepted a `model` parameter from the client without validation, allowing potential model injection or use of unsupported models.
+**Learning:** When an API accepts a parameter that dictates critical behavior (like which AI model to use), relying on the backend library to catch errors is insufficient. This can lead to unpredictable behavior, higher costs (if a more expensive model is injected), or potential prompt injection vectors specific to certain models.
+**Prevention:** Implement strict allowlists (`ALLOWED_MODELS`) for all configuration parameters that control external service behavior. Validate these parameters at the earliest entry point.
