@@ -3,6 +3,13 @@ export const MAX_TYPE_LENGTH = 50;
 export const MAX_RISK_LENGTH = 50;
 export const MAX_RETURN_LENGTH = 20;
 
+export const ALLOWED_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.5-pro',
+  'gemini-flash-latest'
+];
+
 export interface Portfolio {
   name: string;
   type: string;
@@ -87,6 +94,17 @@ export function validateApiKey(key: unknown): { valid: boolean; error?: string }
     return { valid: false, error: 'API Key contains invalid characters' };
   }
 
+  return { valid: true };
+}
+
+export function validateModel(model: unknown): { valid: boolean; error?: string } {
+  if (!model) return { valid: true }; // Optional, falls back to default list if not provided
+  if (typeof model !== 'string') {
+    return { valid: false, error: 'Model must be a string' };
+  }
+  if (!ALLOWED_MODELS.includes(model)) {
+    return { valid: false, error: 'Invalid model selected' };
+  }
   return { valid: true };
 }
 
