@@ -20,3 +20,8 @@
 **Vulnerability:** The `/api/analyze` endpoint accepted a `model` parameter from the client without validation, allowing potential model injection or use of unsupported models.
 **Learning:** When an API accepts a parameter that dictates critical behavior (like which AI model to use), relying on the backend library to catch errors is insufficient. This can lead to unpredictable behavior, higher costs (if a more expensive model is injected), or potential prompt injection vectors specific to certain models.
 **Prevention:** Implement strict allowlists (`ALLOWED_MODELS`) for all configuration parameters that control external service behavior. Validate these parameters at the earliest entry point.
+
+## 2025-05-26 - Prompt Injection via Unsanitized Portfolio Fields
+**Vulnerability:** The `portfolio` fields (name, type, risk) were validated for length but not content, allowing attackers to inject newlines and malicious instructions into the LLM prompt.
+**Learning:** Length limits are insufficient for LLM inputs. Attackers can use control characters (like newlines) to break out of the prompt context and override instructions.
+**Prevention:** Implement strict regex validation for all text inputs destined for LLMs. Explicitly disallow newlines and control characters unless they are absolutely required and properly escaped.

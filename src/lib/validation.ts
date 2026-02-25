@@ -3,6 +3,10 @@ export const MAX_TYPE_LENGTH = 50;
 export const MAX_RISK_LENGTH = 50;
 export const MAX_RETURN_LENGTH = 20;
 
+// Regex for safe text: Alphanumeric, spaces, common punctuation, Spanish accents.
+// Explicitly rejects newlines and other control characters to prevent prompt injection.
+const SAFE_TEXT_REGEX = /^[a-zA-Z0-9 .,\-\(\)'&áéíóúÁÉÍÓÚñÑüÜ]+$/;
+
 export const ALLOWED_MODELS = [
   'gemini-2.5-flash',
   'gemini-2.0-flash',
@@ -43,13 +47,22 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
   if (obj.name.length > MAX_NAME_LENGTH) {
     return { valid: false, error: `Name exceeds max length of ${MAX_NAME_LENGTH}` };
   }
+  if (!SAFE_TEXT_REGEX.test(obj.name)) {
+    return { valid: false, error: 'Name contains invalid characters' };
+  }
 
   // Basic type checks
   if (typeof obj.type !== 'string') return { valid: false, error: 'Invalid type' };
   if (obj.type.length > MAX_TYPE_LENGTH) return { valid: false, error: `Type exceeds max length of ${MAX_TYPE_LENGTH}` };
+  if (!SAFE_TEXT_REGEX.test(obj.type)) {
+    return { valid: false, error: 'Type contains invalid characters' };
+  }
 
   if (typeof obj.risk !== 'string') return { valid: false, error: 'Invalid risk' };
   if (obj.risk.length > MAX_RISK_LENGTH) return { valid: false, error: `Risk exceeds max length of ${MAX_RISK_LENGTH}` };
+  if (!SAFE_TEXT_REGEX.test(obj.risk)) {
+    return { valid: false, error: 'Risk contains invalid characters' };
+  }
 
   if (typeof obj.value !== 'string' && typeof obj.value !== 'number') {
     return { valid: false, error: 'Invalid value: must be string or number' };
