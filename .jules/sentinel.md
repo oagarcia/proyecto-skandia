@@ -25,3 +25,8 @@
 **Vulnerability:** The `portfolio` fields (name, type, risk) were validated for length but not content, allowing attackers to inject newlines and malicious instructions into the LLM prompt.
 **Learning:** Length limits are insufficient for LLM inputs. Attackers can use control characters (like newlines) to break out of the prompt context and override instructions.
 **Prevention:** Implement strict regex validation for all text inputs destined for LLMs. Explicitly disallow newlines and control characters unless they are absolutely required and properly escaped.
+
+## 2025-05-26 - Inconsistent Validation in Nested/Union Types
+**Vulnerability:** The `portfolio.returns` (nested object) and `portfolio.value` (union type string|number) were not fully validated. `returns` fields lacked regex validation, and `value` lacked validation when it was a string, creating blind spots for prompt injection.
+**Learning:** Validation logic must be recursively rigorous. If a field can be a string (even if union with number), it must be regex-validated. Nested objects must have their properties validated with the same strictness as top-level fields.
+**Prevention:** Ensure all string paths in union types are validated against regex and length limits. Apply validation to all leaf nodes of nested objects.
