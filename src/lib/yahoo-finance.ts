@@ -1,5 +1,20 @@
 import puppeteer, { Browser } from 'puppeteer';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
+import pLimit from 'p-limit';
+
+/**
+ * Global concurrency limit for scraping operations.
+ *
+ * RATIONALE:
+ * 1. Memory Management: Each Puppeteer page consumes significant memory (approx 100-300MB).
+ *    Unbounded concurrency can lead to Out-Of-Memory (OOM) errors in resource-constrained environments.
+ * 2. Stability: Yahoo Finance may implement rate-limiting or IP blocking if too many
+ *    simultaneous requests are detected. Limiting concurrency makes the scraper more resilient.
+ * 3. Efficiency: Spawning too many pages simultaneously causes CPU and network contention,
+ *    often resulting in slower overall performance than a controlled parallel approach.
+ */
+const CONCURRENCY_LIMIT = 3;
+const symbolLimit = pLimit(CONCURRENCY_LIMIT);
 
 // Function to fetch data for multiple symbols using a single browser instance
 export async function fetchYahooFinanceDataForSymbols(symbols: string[], browserInstance?: Browser): Promise<string> {
@@ -18,8 +33,8 @@ export async function fetchYahooFinanceDataForSymbols(symbols: string[], browser
             console.log(`[Yahoo Finance] Using shared browser instance for ${symbols.length} symbols...`);
         }
 
-        // Execute symbol scraping in parallel
-        const promises = symbols.map(symbol => fetchYahooDataWithBrowser(browser!, symbol));
+        // Execute symbol scraping in parallel with concurrency limit
+        const promises = symbols.map(symbol => symbolLimit(() => fetchYahooDataWithBrowser(browser!, symbol)));
         const results = await Promise.all(promises);
 
         return results.join('\n');
@@ -150,10 +165,11 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
         // Close page before processing articles to save resources
         await page.close();
 
-        // Parallelize article scraping
+        // Parallelize article scraping with concurrency limit
+        const articleLimit = pLimit(CONCURRENCY_LIMIT);
         const articlePromises = newsLinks
             .filter((item: { url: string; title: string }) => item.url.includes('finance.yahoo.com/news') || item.url.includes('finance.yahoo.com/m/'))
-            .map(async (item: { url: string; title: string }) => {
+            .map((item: { url: string; title: string }) => articleLimit(async () => {
                  console.log(`[Yahoo Finance] Scraping article: ${item.title}`);
                  let content = `\n### ${item.title}\n`;
                  try {
@@ -163,7 +179,7 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
                      content += `(No se pudo cargar el detalle)\n [Fuente](${item.url})\n`;
                  }
                  return content;
-            });
+            }));
 
         const articleResults = await Promise.all(articlePromises);
         extractedText += articleResults.join('');
