@@ -1,11 +1,12 @@
 export const MAX_NAME_LENGTH = 100;
 export const MAX_TYPE_LENGTH = 50;
 export const MAX_RISK_LENGTH = 50;
+export const MAX_VALUE_LENGTH = 50;
 export const MAX_RETURN_LENGTH = 20;
 
 // Regex for safe text: Alphanumeric, spaces, common punctuation, Spanish accents.
 // Explicitly rejects newlines and other control characters to prevent prompt injection.
-const SAFE_TEXT_REGEX = /^[a-zA-Z0-9 .,\-\(\)'&áéíóúÁÉÍÓÚñÑüÜ]+$/;
+const SAFE_TEXT_REGEX = /^[a-zA-Z0-9 .,\-\(\)'&%+\áéíóúÁÉÍÓÚñÑüÜ]+$/;
 
 export const ALLOWED_MODELS = [
   'gemini-2.5-flash',
@@ -67,6 +68,14 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
   if (typeof obj.value !== 'string' && typeof obj.value !== 'number') {
     return { valid: false, error: 'Invalid value: must be string or number' };
   }
+  if (typeof obj.value === 'string') {
+    if (obj.value.length > MAX_VALUE_LENGTH) {
+      return { valid: false, error: `Value exceeds max length of ${MAX_VALUE_LENGTH}` };
+    }
+    if (!SAFE_TEXT_REGEX.test(obj.value)) {
+      return { valid: false, error: 'Value contains invalid characters' };
+    }
+  }
 
   if (typeof obj.returns !== 'object' || obj.returns === null) {
     return { valid: false, error: 'Invalid returns object' };
@@ -84,6 +93,9 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
     }
     if (val.length > MAX_RETURN_LENGTH) {
       return { valid: false, error: `Return field ${field} exceeds max length of ${MAX_RETURN_LENGTH}` };
+    }
+    if (!SAFE_TEXT_REGEX.test(val)) {
+      return { valid: false, error: `Return field ${field} contains invalid characters` };
     }
   }
 
