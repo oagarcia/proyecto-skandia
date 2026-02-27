@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 import { isValidDate } from '@/lib/validation';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
+    // Rate Limiting
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
+    // Allow slightly more generous limit for the main data fetch, but still protect it
+    if (!checkRateLimit(ip, 10, 60 * 1000)) {
+        return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
     const { searchParams } = new URL(request.url);
     const now = new Date();
     // Default to a reasonable range if needed, but the portal seems to load data by default or we just need to trigger calculation.
