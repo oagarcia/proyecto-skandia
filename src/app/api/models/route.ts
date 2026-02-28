@@ -1,9 +1,21 @@
 
 import { NextResponse } from 'next/server';
 import { validateApiKey } from '@/lib/validation';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
     try {
+        // Implement Rate Limiting
+        const ip = request.headers.get('x-forwarded-for') || 'unknown';
+        const limitResult = rateLimit(`models_${ip}`, { limit: 20, windowMs: 60 * 1000 }); // 20 requests per minute
+
+        if (!limitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Too many requests. Please try again later.' },
+                { status: 429, headers: { 'Retry-After': String(Math.ceil((limitResult.reset - Date.now()) / 1000)) } }
+            );
+        }
+
         const { apiKey } = await request.json();
 
         if (!apiKey) {

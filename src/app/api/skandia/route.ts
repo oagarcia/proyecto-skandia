@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 import { isValidDate } from '@/lib/validation';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
+    // Implement Rate Limiting
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const limitResult = rateLimit(`skandia_${ip}`, { limit: 10, windowMs: 60 * 1000 }); // 10 requests per minute
+
+    if (!limitResult.success) {
+        return NextResponse.json(
+            { success: false, error: 'Too many requests. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil((limitResult.reset - Date.now()) / 1000)) } }
+        );
+    }
+
     const { searchParams } = new URL(request.url);
     const now = new Date();
     // Default to a reasonable range if needed, but the portal seems to load data by default or we just need to trigger calculation.

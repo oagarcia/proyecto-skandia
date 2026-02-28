@@ -7,10 +7,22 @@ import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import { fetchYahooFinanceDataForSymbols } from '@/lib/yahoo-finance';
 import { validatePortfolio, validateApiKey, validateModel } from '@/lib/validation';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
     let browser: Browser | null = null;
     try {
+        // Implement Rate Limiting
+        const ip = request.headers.get('x-forwarded-for') || 'unknown';
+        const limitResult = rateLimit(`analyze_${ip}`, { limit: 5, windowMs: 60 * 1000 }); // 5 requests per minute
+
+        if (!limitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Too many requests. Please try again later.' },
+                { status: 429, headers: { 'Retry-After': String(Math.ceil((limitResult.reset - Date.now()) / 1000)) } }
+            );
+        }
+
         const { portfolio, apiKey, model: selectedModel } = await request.json();
 
         if (!apiKey) {
