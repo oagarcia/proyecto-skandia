@@ -69,7 +69,12 @@ export async function getPortfolioPdf(portfolioName: string, browserInstance?: B
 
         // Construct the Security.aspx URL
         // https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx?Origen=...
-        const securityUrl = `https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx?Origen=${params.origin}&Period=${period}&IdVariable=${params.idPortfolio}&Product=${params.idProduct}`;
+        const urlObj = new URL('https://portal.skandia.com.co/SkCo.Communications.Web/SkCo/Communications/Web/Security.aspx');
+        urlObj.searchParams.set('Origen', params.origin);
+        urlObj.searchParams.set('Period', period);
+        urlObj.searchParams.set('IdVariable', params.idPortfolio);
+        urlObj.searchParams.set('Product', params.idProduct);
+        const securityUrl = urlObj.toString();
 
         console.log(`[PDF Scraper] Navigating to Security URL: ${securityUrl}`);
 

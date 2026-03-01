@@ -30,3 +30,8 @@
 **Vulnerability:** The `portfolio.returns` (nested object) and `portfolio.value` (union type string|number) were not fully validated. `returns` fields lacked regex validation, and `value` lacked validation when it was a string, creating blind spots for prompt injection.
 **Learning:** Validation logic must be recursively rigorous. If a field can be a string (even if union with number), it must be regex-validated. Nested objects must have their properties validated with the same strictness as top-level fields.
 **Prevention:** Ensure all string paths in union types are validated against regex and length limits. Apply validation to all leaf nodes of nested objects.
+
+## 2025-05-27 - URL Parameter Injection via String Concatenation
+**Vulnerability:** URL parameters extracted from untrusted DOM elements were directly concatenated into a fetch URL without encoding, exposing the application to parameter injection or malformed requests.
+**Learning:** Even if data comes from our own application's DOM (via Puppeteer scraping), it should be treated as untrusted input. Concatenating variables into a URL string without `encodeURIComponent` allows values containing `&` or `=` to manipulate the query structure.
+**Prevention:** Always construct URLs dynamically using the native `URL` and `URLSearchParams` objects. This guarantees safe parameter encoding and prevents injection vulnerabilities by design.
