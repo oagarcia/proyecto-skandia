@@ -1,9 +1,17 @@
 
 import { NextResponse } from 'next/server';
 import { validateApiKey } from '@/lib/validation';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
     try {
+        // Rate Limiting
+        const forwardedFor = request.headers.get('x-forwarded-for');
+        const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
+        if (!checkRateLimit(ip, 10, 60 * 1000)) { // 10 requests per minute per IP
+            return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
+        }
+
         const { apiKey } = await request.json();
 
         if (!apiKey) {
@@ -36,8 +44,8 @@ export async function POST(request: Request) {
         // Filter for models that support content generation
         // Usually these start with "models/gemini" and support "generateContent"
         const models = (data.models || [])
-            .filter((m: any) => m.name.includes('gemini') && m.supportedGenerationMethods?.includes('generateContent'))
-            .map((m: any) => m.name.replace('models/', '')) // Remove 'models/' prefix for cleaner display
+            .filter((m: { name: string; supportedGenerationMethods?: string[] }) => m.name.includes('gemini') && m.supportedGenerationMethods?.includes('generateContent'))
+            .map((m: { name: string; supportedGenerationMethods?: string[] }) => m.name.replace('models/', '')) // Remove 'models/' prefix for cleaner display
             .sort((a: string, b: string) => b.localeCompare(a)); // Sort roughly by newest (higher numbers/versions)
 
         return NextResponse.json({
@@ -45,11 +53,11 @@ export async function POST(request: Request) {
             models: models
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Models API Error:', error);
         return NextResponse.json({
             success: false,
-            error: error.message || 'Internal server error'
+            error: 'Internal server error'
         }, { status: 500 });
     }
 }
