@@ -168,7 +168,16 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
         // Parallelize article scraping with concurrency limit
         const articleLimit = pLimit(CONCURRENCY_LIMIT);
         const articlePromises = newsLinks
-            .filter((item: { url: string; title: string }) => item.url.includes('finance.yahoo.com/news') || item.url.includes('finance.yahoo.com/m/'))
+            .filter((item: { url: string; title: string }) => {
+                try {
+                    const parsedUrl = new URL(item.url);
+                    // Prevent SSRF: ensure we only scrape trusted Yahoo Finance articles, not attacker-controlled domains
+                    return parsedUrl.hostname === 'finance.yahoo.com' &&
+                        (parsedUrl.pathname.startsWith('/news/') || parsedUrl.pathname.startsWith('/m/'));
+                } catch {
+                    return false;
+                }
+            })
             .map((item: { url: string; title: string }) => articleLimit(async () => {
                  console.log(`[Yahoo Finance] Scraping article: ${item.title}`);
                  let content = `\n### ${item.title}\n`;
