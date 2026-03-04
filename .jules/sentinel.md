@@ -35,3 +35,8 @@
 **Vulnerability:** URL parameters extracted from untrusted DOM elements were directly concatenated into a fetch URL without encoding, exposing the application to parameter injection or malformed requests.
 **Learning:** Even if data comes from our own application's DOM (via Puppeteer scraping), it should be treated as untrusted input. Concatenating variables into a URL string without `encodeURIComponent` allows values containing `&` or `=` to manipulate the query structure.
 **Prevention:** Always construct URLs dynamically using the native `URL` and `URLSearchParams` objects. This guarantees safe parameter encoding and prevents injection vulnerabilities by design.
+
+## 2025-05-28 - SSRF via Weak URL Validation
+**Vulnerability:** URL validation for news article scraping relied on string `.includes()`. Attackers could provide malicious URLs that satisfy `.includes()` but route to arbitrary servers (e.g., `http://attacker.com/?finance.yahoo.com/news`), leading to Server-Side Request Forgery (SSRF) when Puppeteer attempts to scrape the article.
+**Learning:** String inclusion checks are inadequate for validating URLs, as attackers can embed the required string anywhere in the URL (query string, fragment, etc.).
+**Prevention:** Always use robust URL parsing (e.g., the native `URL` constructor) to validate `hostname` and `pathname` explicitly before navigating or making requests to untrusted inputs.
