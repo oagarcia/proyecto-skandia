@@ -15,6 +15,7 @@ const cspHeader = `
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  poweredByHeader: false,
   async headers() {
     return [
       {

@@ -6,8 +6,10 @@ import { checkRateLimit } from '@/lib/rate-limit';
 export async function POST(request: Request) {
     try {
         // Rate Limiting
+        // Prefer x-real-ip to mitigate trivial IP spoofing bypass via x-forwarded-for
+        const realIp = request.headers.get('x-real-ip');
         const forwardedFor = request.headers.get('x-forwarded-for');
-        const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
+        const ip = realIp || (forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown');
         if (!checkRateLimit(ip, 10, 60 * 1000)) { // 10 requests per minute per IP
             return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
         }
