@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const forwardedFor = request.headers.get('x-forwarded-for');
     const ip = realIp || (forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown');
     // Allow slightly more generous limit for the main data fetch, but still protect it
-    if (!checkRateLimit(ip, 10, 60 * 1000)) {
+    if (!checkRateLimit(ip, 20, 60 * 1000)) {
         return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
     }
 
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
             await page.waitForSelector('#variacionCb', { timeout: 5000 });
             await page.click('#variacionCb');
             // Wait for the change to trigger (it has an onclick handler)
-            await page.waitForNetworkIdle({ idleTime: 500, timeout: 5000 }).catch(() => {});
+            await page.waitForNetworkIdle({ idleTime: 500, timeout: 5000 }).catch(() => { });
         } catch (e) {
             console.warn('Could not click "Variación Unidad" radio button:', e);
         }
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
             await page.waitForSelector('.calcularButton', { timeout: 5000 });
             await page.click('.calcularButton');
             // Wait for data reload
-            await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => {});
+            await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => { });
         } catch (e) {
             console.log('Calculate button not found or click failed', e);
         }

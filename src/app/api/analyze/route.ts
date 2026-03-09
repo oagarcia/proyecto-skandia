@@ -17,7 +17,7 @@ export async function POST(request: Request) {
         const realIp = request.headers.get('x-real-ip');
         const forwardedFor = request.headers.get('x-forwarded-for');
         const ip = realIp || (forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown');
-        if (!checkRateLimit(ip, 5, 60 * 1000)) { // 5 requests per minute per IP
+        if (!checkRateLimit(ip, 20, 60 * 1000)) { // 5 requests per minute per IP
             return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
         }
 
