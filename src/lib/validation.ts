@@ -4,16 +4,12 @@ export const MAX_RISK_LENGTH = 50;
 export const MAX_VALUE_LENGTH = 50;
 export const MAX_RETURN_LENGTH = 20;
 
+import { aiSettings } from '@/config/ai-settings';
+
+
 // Regex for safe text: Alphanumeric, spaces, common punctuation, Spanish accents.
 // Explicitly rejects newlines and other control characters to prevent prompt injection.
 const SAFE_TEXT_REGEX = /^[a-zA-Z0-9 .,\-\(\)'&%+\áéíóúÁÉÍÓÚñÑüÜ]+$/;
-
-export const ALLOWED_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.5-pro',
-  'gemini-flash-latest'
-];
 
 export interface Portfolio {
   name: string;
@@ -127,7 +123,7 @@ export function validateModel(model: unknown): { valid: boolean; error?: string 
   if (typeof model !== 'string') {
     return { valid: false, error: 'Model must be a string' };
   }
-  if (!ALLOWED_MODELS.includes(model)) {
+  if (!aiSettings.allowedModels.includes(model)) {
     return { valid: false, error: 'Invalid model selected' };
   }
   return { valid: true };
