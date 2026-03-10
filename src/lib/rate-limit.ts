@@ -9,6 +9,8 @@ const ipRequests = new Map<string, number[]>();
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 // Max retention time (1 hour) to safely cover the longest expected rate limit window
 const MAX_RETENTION_MS = 60 * 60 * 1000;
+// Max IPs to track to prevent memory exhaustion DoS attacks via IP spoofing
+export const MAX_TRACKED_IPS = 10000;
 let lastCleanup = Date.now();
 
 /**
@@ -45,6 +47,12 @@ export function checkRateLimit(ip: string, limit: number = 5, windowMs: number =
 
     // Trigger lazy cleanup
     cleanup();
+
+    // Prevent Map from growing indefinitely during an IP spoofing attack (DoS mitigation)
+    if (ipRequests.size >= MAX_TRACKED_IPS && !ipRequests.has(ip)) {
+        console.warn(`[Rate Limiter] Max tracked IPs (${MAX_TRACKED_IPS}) reached. Rejecting new IP: ${ip}`);
+        return false;
+    }
 
     const windowStart = now - windowMs;
 

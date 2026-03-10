@@ -40,3 +40,8 @@
 **Vulnerability:** URL validation for news article scraping relied on string `.includes()`. Attackers could provide malicious URLs that satisfy `.includes()` but route to arbitrary servers (e.g., `http://attacker.com/?finance.yahoo.com/news`), leading to Server-Side Request Forgery (SSRF) when Puppeteer attempts to scrape the article.
 **Learning:** String inclusion checks are inadequate for validating URLs, as attackers can embed the required string anywhere in the URL (query string, fragment, etc.).
 **Prevention:** Always use robust URL parsing (e.g., the native `URL` constructor) to validate `hostname` and `pathname` explicitly before navigating or making requests to untrusted inputs.
+
+## 2025-10-27 - Denial of Service (DoS) via Unbounded IP Tracking (Memory Exhaustion)
+**Vulnerability:** The application tracked IP addresses for rate limiting using an unbounded, in-memory `Map`. By spoofing the `X-Forwarded-For` or `X-Real-IP` headers, an attacker could generate millions of unique IPs, forcing the Map to grow infinitely, exhausting server memory (OOM), and leading to a complete Denial of Service.
+**Learning:** In-memory tracking structures (like maps or arrays) that rely on user-controllable inputs (like IP headers) must always have an explicit maximum size constraint. Otherwise, they become an easy vector for resource exhaustion attacks.
+**Prevention:** Enforce a hard cap (e.g., `MAX_TRACKED_IPS`) on any stateful structures used for security controls (like rate limiters). When the capacity is reached, fail securely by rejecting new un-tracked requests to preserve system availability.
