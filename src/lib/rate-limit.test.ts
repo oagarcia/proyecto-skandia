@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkRateLimit } from './rate-limit';
+import { checkRateLimit, MAX_TRACKED_IPS } from './rate-limit';
 
 describe('Rate Limiter', () => {
     it('should allow requests within the limit', () => {
@@ -44,5 +44,27 @@ describe('Rate Limiter', () => {
 
         // IP2 should still be free
         expect(checkRateLimit(ip2, limit, windowMs)).toBe(true);
+    });
+
+    it('should enforce MAX_TRACKED_IPS to prevent memory exhaustion', () => {
+        const limit = 5;
+        const windowMs = 5000;
+
+        // Exhaust the rate limit for the first IP
+        for (let j = 0; j < limit; j++) {
+            expect(checkRateLimit(`test-ip-0`, limit, windowMs)).toBe(true);
+        }
+        expect(checkRateLimit(`test-ip-0`, limit, windowMs)).toBe(false);
+
+        // Track the remaining IPs up to MAX_TRACKED_IPS
+        for (let i = 1; i < MAX_TRACKED_IPS; i++) {
+            checkRateLimit(`test-ip-${i}`, limit, windowMs);
+        }
+
+        // Add one more IP, causing the first one (`test-ip-0`) to be evicted
+        checkRateLimit(`test-ip-${MAX_TRACKED_IPS}`, limit, windowMs);
+
+        // `test-ip-0` was evicted. Its rate limit history is gone, so a new request from it should be allowed.
+        expect(checkRateLimit(`test-ip-0`, limit, windowMs)).toBe(true);
     });
 });
