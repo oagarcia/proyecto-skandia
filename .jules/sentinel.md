@@ -40,3 +40,8 @@
 **Vulnerability:** URL validation for news article scraping relied on string `.includes()`. Attackers could provide malicious URLs that satisfy `.includes()` but route to arbitrary servers (e.g., `http://attacker.com/?finance.yahoo.com/news`), leading to Server-Side Request Forgery (SSRF) when Puppeteer attempts to scrape the article.
 **Learning:** String inclusion checks are inadequate for validating URLs, as attackers can embed the required string anywhere in the URL (query string, fragment, etc.).
 **Prevention:** Always use robust URL parsing (e.g., the native `URL` constructor) to validate `hostname` and `pathname` explicitly before navigating or making requests to untrusted inputs.
+
+## 2025-05-28 - Memory Exhaustion DoS via In-Memory Rate Limiter
+**Vulnerability:** The `checkRateLimit` implementation tracked API requests using an unbounded `Map<string, number[]>`. An attacker could spoof headers like `x-forwarded-for` to generate millions of unique IPs, causing the tracked map to grow indefinitely until the Node.js process crashed from a Memory Exhaustion Denial of Service (DoS) error.
+**Learning:** Unbounded data structures tracking external input (like IPs) are dangerous. Even with time-based garbage collection/cleanup routines, the server memory can be quickly exhausted by a high-volume spoofed attack within a single time window.
+**Prevention:** Always cap the maximum elements stored in an in-memory cache or tracker (`MAX_TRACKED_IPS`). Apply eviction strategies (like deleting the oldest elements when the size limit is hit) to prevent memory allocation beyond safe boundaries.

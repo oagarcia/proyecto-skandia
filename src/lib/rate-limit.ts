@@ -5,6 +5,9 @@
 
 const ipRequests = new Map<string, number[]>();
 
+// Prevent memory exhaustion DoS attacks by capping tracked IPs
+export const MAX_TRACKED_IPS = 10000;
+
 // Cleanup interval (every 5 minutes)
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 // Max retention time (1 hour) to safely cover the longest expected rate limit window
@@ -45,6 +48,13 @@ export function checkRateLimit(ip: string, limit: number = 5, windowMs: number =
 
     // Trigger lazy cleanup
     cleanup();
+
+    // Enforce memory limit to prevent memory exhaustion DoS via IP spoofing
+    if (!ipRequests.has(ip) && ipRequests.size >= MAX_TRACKED_IPS) {
+        // Evict the oldest tracked IP (first element in Map iteration order)
+        const oldestIp = ipRequests.keys().next().value;
+        if (oldestIp !== undefined) ipRequests.delete(oldestIp);
+    }
 
     const windowStart = now - windowMs;
 
