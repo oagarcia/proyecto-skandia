@@ -44,7 +44,14 @@ export async function GET(request: Request) {
         console.log('Launching browser...');
         browser = await puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ],
+            // On some environments like Render, the path to the executable might be different
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         });
         console.log('Browser launched');
         const page = await browser.newPage();
@@ -148,9 +155,15 @@ export async function GET(request: Request) {
         await browser.close();
         return NextResponse.json({ success: true, data: portfolios });
 
-    } catch (error) {
-        console.error(error);
+    } catch (error: any) {
+        console.error('Scraping error:', error);
         if (browser) await browser.close();
-        return NextResponse.json({ success: false, error: 'Failed to scrape data' }, { status: 500 });
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return NextResponse.json({ 
+            success: false, 
+            error: 'Failed to scrape data', 
+            details: errorMessage 
+        }, { status: 500 });
     }
 }
