@@ -54,7 +54,7 @@ export async function fetchYahooFinanceData(symbol: string, browserInstance?: Br
 
 
 async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Promise<string> {
-    const mainUrl = `https://finance.yahoo.com/quote/${symbol}/`;
+    const mainUrl = `https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/`;
     console.log(`[Yahoo Finance] Processing ${symbol}...`);
 
     let page;
