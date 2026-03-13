@@ -159,11 +159,11 @@ export async function GET(request: Request) {
         console.error('Scraping error:', error);
         if (browser) await browser.close();
         
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        // 🛡️ SENTINEL: Do not leak internal error details or stack traces to the client
+        // to prevent information disclosure vulnerabilities.
         return NextResponse.json({ 
             success: false, 
-            error: 'Failed to scrape data', 
-            details: errorMessage 
+            error: 'Failed to scrape data. Please check logs for details.'
         }, { status: 500 });
     }
 }
