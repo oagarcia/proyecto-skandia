@@ -25,7 +25,16 @@ export async function searchGoogleNews(query: string, browserInstance?: Browser)
         // Navigate to Google News search
         // Using hl=en and gl=US to ensure global coverage for international assets
         // This fixes the issue where "clean" searches yield 0 results for specific ETFs
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=nws&hl=en&gl=US&tbs=qdr:m`;
+        // SENTINEL: Using URLSearchParams to construct query strings prevents SSRF
+        // and malformed URLs by automatically encoding parameters correctly.
+        const urlObj = new URL('https://www.google.com/search');
+        urlObj.searchParams.set('q', query);
+        urlObj.searchParams.set('tbm', 'nws');
+        urlObj.searchParams.set('hl', 'en');
+        urlObj.searchParams.set('gl', 'US');
+        urlObj.searchParams.set('tbs', 'qdr:m');
+        const searchUrl = urlObj.toString();
+
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);

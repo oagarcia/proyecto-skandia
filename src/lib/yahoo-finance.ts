@@ -54,7 +54,10 @@ export async function fetchYahooFinanceData(symbol: string, browserInstance?: Br
 
 
 async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Promise<string> {
-    const mainUrl = `https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/`;
+    // SENTINEL: Use the URL interface to safely construct paths, avoiding potential
+    // manipulation that could break the URL structure or lead to SSRF if abused.
+    const urlObj = new URL(`https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/`);
+    const mainUrl = urlObj.toString();
     console.log(`[Yahoo Finance] Processing ${symbol}...`);
 
     let page;
