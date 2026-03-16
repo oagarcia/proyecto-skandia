@@ -1,6 +1,14 @@
 import puppeteer, { Browser } from 'puppeteer';
 
 export async function getPortfolioPdf(portfolioName: string, browserInstance?: Browser): Promise<{ pdfBase64: string | null, pdfUrl: string | null }> {
+    // 🛡️ SENTINEL: Add input length limits to prevent DoS via extremely long portfolio names.
+    // Extremely long strings processed by Puppeteer evaluate functions can cause excessive
+    // memory consumption or timeouts. If the name exceeds the maximum expected length, reject it.
+    if (!portfolioName || portfolioName.length > 200) {
+        console.warn(`[PDF Scraper] Invalid portfolio name: Name is empty or exceeds maximum length of 200 characters.`);
+        return { pdfBase64: null, pdfUrl: null };
+    }
+
     let browser = browserInstance;
     let ownBrowser = false;
 
