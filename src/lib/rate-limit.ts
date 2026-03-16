@@ -51,9 +51,10 @@ export function checkRateLimit(ip: string, limit: number = 5, windowMs: number =
 
     // Enforce memory limit to prevent memory exhaustion DoS via IP spoofing
     if (!ipRequests.has(ip) && ipRequests.size >= MAX_TRACKED_IPS) {
-        // Evict the oldest tracked IP (first element in Map iteration order)
-        const oldestIp = ipRequests.keys().next().value;
-        if (oldestIp !== undefined) ipRequests.delete(oldestIp);
+        // 🛡️ SENTINEL: DO NOT evict the oldest IP, as this allows an attacker to flush
+        // the cache and bypass rate limiting for everyone via IP spoofing.
+        // Instead, refuse to track new IPs and deny the request to protect memory.
+        return false;
     }
 
     const windowStart = now - windowMs;
