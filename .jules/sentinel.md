@@ -1,5 +1,4 @@
-## 2024-05-14 - URL construction vulnerability using template literal string
-
-**Vulnerability:** Constructing URLs in Yahoo Finance scraping (`src/lib/yahoo-finance.ts`) manually via string concatenation with unencoded variables (e.g. `https://finance.yahoo.com/quote/${symbol}/`) leaves the application vulnerable to Server-Side Request Forgery (SSRF) or Path Traversal if the parameter can be manipulated.
-**Learning:** Even if a variable is expected to be a simple alphanumeric string (like a stock symbol), it must be sanitized before being used in URL construction to prevent unexpected characters (like `../`, `?`, `#`) from altering the structure of the request and causing it to fetch unintended endpoints.
-**Prevention:** Always use `encodeURIComponent(variable)` when building path segments via template strings, or use the `URL` and `URLSearchParams` interfaces to construct URLs which handle encoding automatically.
+## 2025-02-17 - Prevent Information Disclosure via Error Messages
+**Vulnerability:** Scraper functions (`fetchYahooFinanceDataForSymbols`, `fetchYahooDataWithBrowser`) were capturing raw `error.message` strings in catch blocks and embedding them directly into return strings. These strings are then used as context in LLM prompts.
+**Learning:** Raw error messages from dependencies or environment failures can contain sensitive information like internal paths, database queries, stack traces, or configuration details. Leaking this directly into an LLM prompt (or back to a client) violates the principle of "Fail securely".
+**Prevention:** Always replace detailed, raw internal error strings with generic, safe fallback messages (e.g., "An internal error occurred") before returning them across module or network boundaries, while maintaining raw logging via `console.error` for debugability.

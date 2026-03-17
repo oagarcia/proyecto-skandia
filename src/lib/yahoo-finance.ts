@@ -40,8 +40,8 @@ export async function fetchYahooFinanceDataForSymbols(symbols: string[], browser
         return results.join('\n');
     } catch (error: unknown) {
         console.error('[Yahoo Finance] Error in shared browser session:', error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return `Error fetching data for symbols: ${errorMessage}`;
+        // SENTINEL: Do not leak detailed error messages
+        return `Error fetching data for symbols: An internal error occurred.`;
     } finally {
         if (ownBrowser && browser) await browser.close();
     }
@@ -205,8 +205,8 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
     } catch (error: unknown) {
         if (page && !page.isClosed()) await page.close().catch(() => {});
         console.error(`[Yahoo Finance] Error scraping ${symbol}:`, error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return `Error recuperando información para ${symbol}: ${errorMessage}`;
+        // SENTINEL: Do not leak detailed error messages
+        return `Error recuperando información para ${symbol}: An internal error occurred.`;
     }
 }
 
