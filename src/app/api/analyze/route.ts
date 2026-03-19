@@ -245,8 +245,8 @@ Rentabilidades:
                 });
 
             } catch (error: unknown) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                console.warn(`Failed with model ${modelName}: `, errorMessage);
+                // SENTINEL: Do not log or leak detailed error messages to user context. Just log it.
+                console.warn(`Failed with model ${modelName}: `, error);
                 lastError = error;
                 // Continue to next model
             }
