@@ -119,8 +119,7 @@ export async function getPortfolioPdf(portfolioName: string, browserInstance?: B
         // Basic validation: Check PDF signature (%PDF)
         if (buffer.lastIndexOf('%PDF') === -1 && !contentType?.includes('pdf')) {
             console.warn('[PDF Scraper] Response does not look like a PDF (missing signature or wrong mime).');
-            // Log a bit of the content to debug
-            console.log('[PDF Scraper] Response preview:', buffer.slice(0, 100).toString());
+            // 🛡️ SENTINEL: Do not log raw response buffers to prevent sensitive data disclosure
             return { pdfBase64: null, pdfUrl: null };
         }
 
