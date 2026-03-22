@@ -7,3 +7,8 @@
 **Vulnerability:** The `getPortfolioPdf` function in `src/lib/pdf-scraper.ts` logged raw response buffers (`buffer.slice(0, 100).toString()`) when the response did not match the expected PDF format.
 **Learning:** Logging raw response buffers from external services can inadvertently capture sensitive data, internal paths, authentication tokens, or other restricted information, especially if the service returns an unexpected error page or API response instead of the expected file.
 **Prevention:** Avoid logging raw response content, especially from external network requests, in production code. Rely on generic error logging and status codes instead to prevent accidental information disclosure.
+
+## 2025-02-18 - Prevent Lock-out DoS in In-Memory Cache
+**Vulnerability:** The in-memory rate limiting implementation in `src/lib/rate-limit.ts` protected its map size (`MAX_TRACKED_IPS`) by refusing to track new IPs. If an attacker spoofed requests from `MAX_TRACKED_IPS` IPs, the map would fill up and permanently block all new requests, creating a Denial of Service.
+**Learning:** Naive size limits on memory structures can be weaponized. "Protecting memory" by dropping valid traffic is the definition of a lock-out DoS. The cache size must be managed safely without denying service.
+**Prevention:** Implement Least Recently Used (LRU) eviction for in-memory IP tracking maps to ensure new legitimate traffic is always admitted while old traffic is purged when memory limits are reached.
