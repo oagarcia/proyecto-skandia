@@ -51,10 +51,14 @@ export function checkRateLimit(ip: string, limit: number = 5, windowMs: number =
 
     // Enforce memory limit to prevent memory exhaustion DoS via IP spoofing
     if (!ipRequests.has(ip) && ipRequests.size >= MAX_TRACKED_IPS) {
-        // 🛡️ SENTINEL: DO NOT evict the oldest IP, as this allows an attacker to flush
-        // the cache and bypass rate limiting for everyone via IP spoofing.
-        // Instead, refuse to track new IPs and deny the request to protect memory.
-        return false;
+        // 🛡️ SENTINEL: Lock-out DoS Prevention
+        // Evict the oldest IP to make room for the new one.
+        // Returning false here would lock out all legitimate new users if an attacker
+        // fills the map with spoofed IPs.
+        const oldestIp = ipRequests.keys().next().value;
+        if (oldestIp !== undefined) {
+            ipRequests.delete(oldestIp);
+        }
     }
 
     const windowStart = now - windowMs;
@@ -67,12 +71,19 @@ export function checkRateLimit(ip: string, limit: number = 5, windowMs: number =
 
     if (validTimestamps.length >= limit) {
         // Still update the map with pruned timestamps to prevent array growth
+        // Ensure LRU order by deleting first before setting
+        ipRequests.delete(ip);
         ipRequests.set(ip, validTimestamps);
         return false;
     }
 
     // Add current timestamp
     validTimestamps.push(now);
+
+    // Ensure LRU order by deleting first before setting
+    if (ipRequests.has(ip)) {
+        ipRequests.delete(ip);
+    }
     ipRequests.set(ip, validTimestamps);
 
     return true;
