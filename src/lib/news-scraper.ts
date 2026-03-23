@@ -1,6 +1,17 @@
 import puppeteer, { Browser } from 'puppeteer';
 
 export async function searchGoogleNews(query: string, browserInstance?: Browser): Promise<string> {
+    // 🛡️ SENTINEL: Add input length limits to prevent DoS via extremely long queries.
+    // Extremely long strings processed by Puppeteer evaluate functions or external
+    // services can cause excessive memory consumption or network timeouts.
+    if (!query || query.length > 200) {
+        console.warn(`[News Scraper] Invalid query: Query is empty or exceeds maximum length of 200 characters. Truncating.`);
+        query = query ? query.substring(0, 200) : "";
+        if (!query) {
+             return "No se pudieron obtener noticias en tiempo real debido a una consulta inválida.";
+        }
+    }
+
     console.log(`[News Scraper] Searching for: ${query}`);
     let browser = browserInstance;
     let ownBrowser = false;
