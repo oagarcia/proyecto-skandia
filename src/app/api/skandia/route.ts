@@ -49,7 +49,9 @@ export async function GET(request: Request) {
         if (process.env.VERCEL) {
             options = {
                 args: chromium.args,
-                executablePath: await chromium.executablePath(),
+                executablePath: await chromium.executablePath(
+                    'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar'
+                ),
                 headless: true,
                 ignoreHTTPSErrors: true,
             };
