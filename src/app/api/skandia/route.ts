@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { isValidDate } from '@/lib/validation';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -42,17 +43,30 @@ export async function GET(request: Request) {
 
     try {
         console.log('Launching browser...');
-        browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu'
-            ],
-            // On some environments like Render, the path to the executable might be different
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        });
+        
+        let options: any = {};
+        
+        if (process.env.VERCEL) {
+            options = {
+                args: chromium.args,
+                executablePath: await chromium.executablePath(),
+                headless: true,
+                ignoreHTTPSErrors: true,
+            };
+        } else {
+            options = {
+                args: [
+                    '--no-sandbox', 
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu'
+                ],
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                headless: true,
+            };
+        }
+
+        browser = await puppeteer.launch(options);
         console.log('Browser launched');
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
