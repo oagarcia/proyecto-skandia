@@ -46,16 +46,10 @@ export async function GET(request: Request) {
         
         let options: any = {};
         
-        if (process.env.VERCEL) {
-            options = {
-                args: chromium.args,
-                executablePath: await chromium.executablePath(
-                    'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar'
-                ),
-                headless: true,
-                ignoreHTTPSErrors: true,
-            };
-        } else {
+        const isDev = process.env.NODE_ENV === 'development';
+        
+        if (isDev) {
+            // Local Mac environment
             options = {
                 args: [
                     '--no-sandbox', 
@@ -65,6 +59,16 @@ export async function GET(request: Request) {
                 ],
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 headless: true,
+            };
+        } else {
+            // Production environments (Vercel, Render.com)
+            options = {
+                args: chromium.args,
+                executablePath: await chromium.executablePath(
+                    'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar'
+                ),
+                headless: true,
+                ignoreHTTPSErrors: true,
             };
         }
 
