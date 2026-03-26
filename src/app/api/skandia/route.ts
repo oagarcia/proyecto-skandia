@@ -176,14 +176,13 @@ export async function GET(request: Request) {
         return NextResponse.json({ success: true, data: portfolios });
 
     } catch (error: any) {
+        // SENTINEL: Log detailed error internally but DO NOT leak stack traces or internal paths to the client.
         console.error('Scraping error:', error);
         if (browser) await browser.close();
         
-        // Temporarily surfacing the error.message to debug Vercel runtime failures
         return NextResponse.json({ 
             success: false, 
-            error: error?.message || 'Failed to scrape data',
-            stack: error?.stack
+            error: 'Failed to scrape data due to an internal server error. Please try again later.'
         }, { status: 500 });
     }
 }
