@@ -179,11 +179,10 @@ export async function GET(request: Request) {
         console.error('Scraping error:', error);
         if (browser) await browser.close();
         
-        // Temporarily surfacing the error.message to debug Vercel runtime failures
+        // SENTINEL: Do not leak detailed error messages or stack traces
         return NextResponse.json({ 
             success: false, 
-            error: error?.message || 'Failed to scrape data',
-            stack: error?.stack
+            error: 'Failed to scrape data. An internal error occurred.'
         }, { status: 500 });
     }
 }
