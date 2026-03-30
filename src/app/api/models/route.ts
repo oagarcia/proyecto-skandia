@@ -26,7 +26,15 @@ export async function POST(request: Request) {
         }
 
         // Fetch models from Google Generative AI API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+        // SENTINEL: Pass the API key securely via the x-goog-api-key header instead of the URL query string
+        // to prevent intermediate proxies or logs from capturing the sensitive key.
+        // Also added an AbortSignal timeout to prevent resource exhaustion (DoS) if the upstream hangs.
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models`, {
+            headers: {
+                'x-goog-api-key': apiKey
+            },
+            signal: AbortSignal.timeout(10000)
+        });
 
         if (!response.ok) {
             const errorData = await response.json();
