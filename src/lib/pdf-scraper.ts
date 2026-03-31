@@ -93,12 +93,14 @@ export async function getPortfolioPdf(portfolioName: string, browserInstance?: B
         console.log(`[PDF Scraper] Fetching PDF via Node.js with ${cookies.length} cookies...`);
 
         // Use Node.js native fetch (available in Next.js/Node 18+)
+        // SENTINEL: Added AbortSignal.timeout to prevent indefinite hang and potential DoS
         const response = await fetch(securityUrl, {
             headers: {
                 'Cookie': cookieHeader,
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
-            redirect: 'follow'
+            redirect: 'follow',
+            signal: AbortSignal.timeout(30000)
         });
 
         if (!response.ok) {
