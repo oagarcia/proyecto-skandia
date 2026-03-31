@@ -12,3 +12,8 @@
 **Vulnerability:** The in-memory rate limiting implementation in `src/lib/rate-limit.ts` protected its map size (`MAX_TRACKED_IPS`) by refusing to track new IPs. If an attacker spoofed requests from `MAX_TRACKED_IPS` IPs, the map would fill up and permanently block all new requests, creating a Denial of Service.
 **Learning:** Naive size limits on memory structures can be weaponized. "Protecting memory" by dropping valid traffic is the definition of a lock-out DoS. The cache size must be managed safely without denying service.
 **Prevention:** Implement Least Recently Used (LRU) eviction for in-memory IP tracking maps to ensure new legitimate traffic is always admitted while old traffic is purged when memory limits are reached.
+
+## 2024-03-31 - [API Key Leakage and Missing Timeouts]
+**Vulnerability:** Google Generative AI API key was sent via URL query parameter in `src/app/api/models/route.ts` (CWE-598). Missing timeouts in Node.js `fetch` calls.
+**Learning:** External API dependencies were integrated quickly without considering logging implications of URLs or the risk of hanging upstream connections (DoS).
+**Prevention:** Always pass credentials via designated HTTP headers (e.g., `x-goog-api-key`, `Authorization`). Enforce `AbortSignal.timeout()` on all server-to-server HTTP requests.
