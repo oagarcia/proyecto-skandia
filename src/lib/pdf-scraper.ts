@@ -1,4 +1,5 @@
-import puppeteer, { Browser } from 'puppeteer';
+import { Browser } from 'puppeteer-core';
+import { getBrowser } from './browser';
 
 export async function getPortfolioPdf(portfolioName: string, browserInstance?: Browser): Promise<{ pdfBase64: string | null, pdfUrl: string | null }> {
     // 🛡️ SENTINEL: Add input length limits to prevent DoS via extremely long portfolio names.
@@ -15,10 +16,7 @@ export async function getPortfolioPdf(portfolioName: string, browserInstance?: B
     try {
         if (!browser) {
             console.log(`[PDF Scraper] Launching browser for ${portfolioName}...`);
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            });
+            browser = await getBrowser();
             ownBrowser = true;
         } else {
             console.log(`[PDF Scraper] Using shared browser instance for ${portfolioName}...`);

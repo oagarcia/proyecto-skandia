@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import puppeteer, { Browser } from 'puppeteer';
+import { Browser } from 'puppeteer-core';
+import { getBrowser } from '@/lib/browser';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { getPortfolioPdf } from '@/lib/pdf-scraper';
 import { searchGoogleNews } from '@/lib/news-scraper';
@@ -49,10 +50,7 @@ export async function POST(request: Request) {
         // Launch Browser Shared Instance
         try {
             console.log('[Analyze API] Launching shared browser instance...');
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-            });
+            browser = await getBrowser();
         } catch (e) {
             console.warn('[Analyze API] Failed to launch shared browser, falling back to individual instances:', e);
         }
@@ -258,7 +256,8 @@ Rentabilidades:
         // SECURE ERROR HANDLING: Avoid leaking model lists or internal error details
         return NextResponse.json({
             success: false,
-            error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
+            //error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
+            error: (lastError instanceof Error ? lastError.message : null) || 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
         }, { status: 500 });
 
     } catch (error: unknown) {

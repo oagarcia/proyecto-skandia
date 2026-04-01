@@ -1,4 +1,5 @@
-import puppeteer, { Browser } from 'puppeteer';
+import { Browser } from 'puppeteer-core';
+import { getBrowser } from './browser';
 
 export async function searchGoogleNews(query: string, browserInstance?: Browser): Promise<string> {
     // 🛡️ SENTINEL: Add input length limits to prevent DoS via extremely long queries.
@@ -19,10 +20,7 @@ export async function searchGoogleNews(query: string, browserInstance?: Browser)
     try {
         if (!browser) {
             console.log(`[News Scraper] Launching new browser...`);
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+            browser = await getBrowser();
             ownBrowser = true;
         } else {
             console.log(`[News Scraper] Using shared browser instance...`);

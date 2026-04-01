@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import { getBrowser } from '@/lib/browser';
 import { isValidDate } from '@/lib/validation';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -44,35 +43,7 @@ export async function GET(request: Request) {
     try {
         console.log('Launching browser...');
         
-        let options: any = {};
-        
-        const isDev = process.env.NODE_ENV === 'development';
-        
-        if (isDev) {
-            // Local Mac environment
-            options = {
-                args: [
-                    '--no-sandbox', 
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu'
-                ],
-                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-                headless: true,
-            };
-        } else {
-            // Production environments (Vercel, Render.com)
-            options = {
-                args: chromium.args,
-                executablePath: await chromium.executablePath(
-                    'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar'
-                ),
-                headless: true,
-                ignoreHTTPSErrors: true,
-            };
-        }
-
-        browser = await puppeteer.launch(options);
+        browser = await getBrowser();
         console.log('Browser launched');
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });

@@ -1,4 +1,5 @@
-import puppeteer, { Browser } from 'puppeteer';
+import { Browser } from 'puppeteer-core';
+import { getBrowser } from './browser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
 import pLimit from 'p-limit';
 
@@ -24,10 +25,7 @@ export async function fetchYahooFinanceDataForSymbols(symbols: string[], browser
     try {
         if (!browser) {
             console.log(`[Yahoo Finance] Launching shared browser for ${symbols.length} symbols...`);
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-            });
+            browser = await getBrowser();
             ownBrowser = true;
         } else {
             console.log(`[Yahoo Finance] Using shared browser instance for ${symbols.length} symbols...`);
