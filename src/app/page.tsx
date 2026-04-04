@@ -94,6 +94,22 @@ const PortfolioCard = ({ portfolio }: { portfolio: Portfolio }) => {
   );
 };
 
+// Helper to sanitize URLs and prevent XSS via javascript: or data: links
+const sanitizeUrl = (url?: string) => {
+  if (!url) return '#';
+  try {
+    // Use a dummy base URL to avoid Server-Side Rendering (SSR) ReferenceError
+    // caused by `window.location.origin` (since `window` is undefined on the server)
+    const parsed = new URL(url, 'https://dummy.base');
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return url; // return original URL instead of absolute-ifying relative paths
+    }
+    return '#';
+  } catch {
+    return '#';
+  }
+};
+
 // Add this component inside the file or separate
 const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () => void }) => {
   const [apiKey, setApiKey] = useState('');
@@ -316,8 +332,9 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                   ul: ({ ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
                   li: ({ ...props }) => <li className="pl-1" {...props} />,
                   strong: ({ ...props }) => <strong className="text-white font-semibold" {...props} />,
-                  a: ({ ...props }) => (
+                  a: ({ href, ...props }) => (
                     <a
+                      href={sanitizeUrl(href)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"

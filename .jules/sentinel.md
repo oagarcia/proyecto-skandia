@@ -17,3 +17,8 @@
 **Vulnerability:** Google Generative AI API key was sent via URL query parameter in `src/app/api/models/route.ts` (CWE-598). Missing timeouts in Node.js `fetch` calls.
 **Learning:** External API dependencies were integrated quickly without considering logging implications of URLs or the risk of hanging upstream connections (DoS).
 **Prevention:** Always pass credentials via designated HTTP headers (e.g., `x-goog-api-key`, `Authorization`). Enforce `AbortSignal.timeout()` on all server-to-server HTTP requests.
+
+## 2025-02-23 - Prevent Markdown XSS via javascript: URIs
+**Vulnerability:** The `<ReactMarkdown>` configuration in `src/app/page.tsx` rendered raw `href` attributes for anchor tags, allowing malicious LLM output or user input to inject `javascript:alert(1)` payloads.
+**Learning:** When using Next.js and ReactMarkdown to render content that includes untrusted URLs (e.g., from search queries reflected back by an LLM), standard markdown parsing does not sanitize protocols by default, creating a High-Priority DOM-based XSS vector.
+**Prevention:** Implement a custom URL sanitizer function that explicitly allows only `http:` and `https:` protocols using the native `URL` constructor. When implementing this in Next.js Client Components, use a dummy base URL (e.g., `new URL(url, 'https://dummy.base')`) instead of `window.location.origin` to prevent ReferenceErrors during Server-Side Rendering (SSR) and subsequent React Hydration Mismatches.
