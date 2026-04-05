@@ -13,6 +13,19 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+function sanitizeUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url, 'https://dummy.base');
+    if (['http:', 'https:', 'mailto:', 'tel:'].includes(parsed.protocol)) {
+      return url;
+    }
+    return undefined; // 🛡️ SENTINEL: Block javascript:, data:, and other unsafe URIs
+  } catch {
+    return undefined;
+  }
+}
+
 interface Portfolio {
   id: string;
   name: string;
@@ -316,16 +329,20 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                   ul: ({ ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
                   li: ({ ...props }) => <li className="pl-1" {...props} />,
                   strong: ({ ...props }) => <strong className="text-white font-semibold" {...props} />,
-                  a: ({ ...props }) => (
-                    <a
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"
-                      {...props}
-                    >
-                      {props.children}
-                    </a>
-                  ),
+                  a: ({ href, ...props }) => {
+                    const safeHref = sanitizeUrl(href);
+                    return (
+                      <a
+                        {...props}
+                        href={safeHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"
+                      >
+                        {props.children}
+                      </a>
+                    );
+                  },
                 }}
               >
                 {analysis}
