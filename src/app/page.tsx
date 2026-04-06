@@ -8,6 +8,19 @@ import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import { aiSettings } from '@/config/ai-settings';
 
+function sanitizeUrl(url: string | undefined): string {
+  if (!url) return '#';
+  try {
+    const parsed = new URL(url, 'https://dummy.base');
+    const safeProtocols = ['http:', 'https:', 'mailto:', 'tel:'];
+    if (safeProtocols.includes(parsed.protocol)) {
+      return url;
+    }
+    return '#';
+  } catch {
+    return '#';
+  }
+}
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -322,6 +335,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"
                       {...props}
+                      href={sanitizeUrl(props.href)}
                     >
                       {props.children}
                     </a>
