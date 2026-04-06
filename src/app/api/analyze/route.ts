@@ -256,8 +256,7 @@ Rentabilidades:
         // SECURE ERROR HANDLING: Avoid leaking model lists or internal error details
         return NextResponse.json({
             success: false,
-            //error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
-            error: (lastError instanceof Error ? lastError.message : null) || 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
+            error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
         }, { status: 500 });
 
     } catch (error: unknown) {
