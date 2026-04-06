@@ -17,3 +17,8 @@
 **Vulnerability:** Google Generative AI API key was sent via URL query parameter in `src/app/api/models/route.ts` (CWE-598). Missing timeouts in Node.js `fetch` calls.
 **Learning:** External API dependencies were integrated quickly without considering logging implications of URLs or the risk of hanging upstream connections (DoS).
 **Prevention:** Always pass credentials via designated HTTP headers (e.g., `x-goog-api-key`, `Authorization`). Enforce `AbortSignal.timeout()` on all server-to-server HTTP requests.
+
+## 2024-04-06 - Prevent XSS in ReactMarkdown Custom Components
+**Vulnerability:** Untrusted text rendered via `react-markdown` passed arbitrary `href` attributes directly to a custom `<a>` component without sanitization, allowing XSS via `javascript:` URIs.
+**Learning:** While `react-markdown` natively prevents XSS in its default rendering, overriding components with custom props (e.g., `components={{ a: ({...props}) => <a {...props}>...</a> }}`) bypasses internal sanitization.
+**Prevention:** Always explicitly validate and sanitize attributes like `href` or `src` when creating custom overrides in markdown renderers. Use the native `URL` constructor to verify protocols against an allowlist (e.g., `['http:', 'https:', 'mailto:', 'tel:']`).
