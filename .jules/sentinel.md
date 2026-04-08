@@ -22,3 +22,8 @@
 **Vulnerability:** Untrusted text rendered via `react-markdown` passed arbitrary `href` attributes directly to a custom `<a>` component without sanitization, allowing XSS via `javascript:` URIs.
 **Learning:** While `react-markdown` natively prevents XSS in its default rendering, overriding components with custom props (e.g., `components={{ a: ({...props}) => <a {...props}>...</a> }}`) bypasses internal sanitization.
 **Prevention:** Always explicitly validate and sanitize attributes like `href` or `src` when creating custom overrides in markdown renderers. Use the native `URL` constructor to verify protocols against an allowlist (e.g., `['http:', 'https:', 'mailto:', 'tel:']`).
+
+## 2024-04-10 - Prevent Rate-Limit Bypass via IP Spoofing
+**Vulnerability:** The application's rate limiting logic blindly trusted the first IP address in the `x-forwarded-for` header (`forwardedFor.split(',')[0]`). This allowed attackers to bypass rate limits by explicitly providing an `x-forwarded-for` header with a spoofed or rotating IP address.
+**Learning:** In typical reverse proxy setups, the proxy appends the real client IP to the end of the `x-forwarded-for` list. Trusting the first IP leaves the system vulnerable to spoofing.
+**Prevention:** To securely extract the real client IP when operating behind a trusted proxy, always parse the last IP in the `x-forwarded-for` chain (e.g., using `.pop()`), assuming `x-real-ip` is not available.
