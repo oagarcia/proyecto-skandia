@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getBrowser } from '@/lib/browser';
 import { isValidDate } from '@/lib/validation';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
     // Rate Limiting
-    // Prefer x-real-ip to mitigate trivial IP spoofing bypass via x-forwarded-for
-    const realIp = request.headers.get('x-real-ip');
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    // SENTINEL: Take the last IP in the X-Forwarded-For list.
-    // Proxies append to the end, so the rightmost IP is the most trustworthy.
-    // Taking the first IP allows attackers to spoof their IP by sending `X-Forwarded-For: fake-ip`.
-    const ip = realIp || (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : 'unknown');
+    const ip = getClientIp(request);
     // Allow slightly more generous limit for the main data fetch, but still protect it
     if (!checkRateLimit(ip, 20, 60 * 1000)) {
         return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429 });

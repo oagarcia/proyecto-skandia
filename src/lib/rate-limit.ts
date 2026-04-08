@@ -43,6 +43,19 @@ function cleanup() {
  * @param windowMs Time window in milliseconds
  * @returns true if allowed, false if limit exceeded
  */
+/**
+ * Securely extracts the client IP address from a request object.
+ * Prefers x-real-ip to mitigate IP spoofing bypass via x-forwarded-for.
+ * If x-real-ip is absent, takes the last IP in the X-Forwarded-For list.
+ * Proxies append to the end, so the rightmost IP is the most trustworthy.
+ * Taking the first IP allows attackers to spoof their IP by sending `X-Forwarded-For: fake-ip`.
+ */
+export function getClientIp(request: Request): string {
+    const realIp = request.headers.get('x-real-ip');
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    return realIp || (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : 'unknown');
+}
+
 export function checkRateLimit(ip: string, limit: number = 5, windowMs: number = 60 * 1000): boolean {
     const now = Date.now();
 
