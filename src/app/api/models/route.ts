@@ -9,7 +9,10 @@ export async function POST(request: Request) {
         // Prefer x-real-ip to mitigate trivial IP spoofing bypass via x-forwarded-for
         const realIp = request.headers.get('x-real-ip');
         const forwardedFor = request.headers.get('x-forwarded-for');
-        const ip = realIp || (forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown');
+        // SENTINEL: Take the last IP in the X-Forwarded-For list.
+        // Proxies append to the end, so the rightmost IP is the most trustworthy.
+        // Taking the first IP allows attackers to spoof their IP by sending `X-Forwarded-For: fake-ip`.
+        const ip = realIp || (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : 'unknown');
         if (!checkRateLimit(ip, 20, 60 * 1000)) { // 10 requests per minute per IP
             return NextResponse.json({ success: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
         }
