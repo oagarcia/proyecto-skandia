@@ -33,7 +33,6 @@ export async function getBrowser(): Promise<Browser> {
                 'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar'
             ),
             headless: true,
-            ignoreHTTPSErrors: true,
         };
     }
 

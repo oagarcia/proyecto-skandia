@@ -27,3 +27,8 @@
 **Vulnerability:** The application's rate limiting logic blindly trusted the first IP address in the `x-forwarded-for` header (`forwardedFor.split(',')[0]`). This allowed attackers to bypass rate limits by explicitly providing an `x-forwarded-for` header with a spoofed or rotating IP address.
 **Learning:** In typical reverse proxy setups, the proxy appends the real client IP to the end of the `x-forwarded-for` list. Trusting the first IP leaves the system vulnerable to spoofing.
 **Prevention:** To securely extract the real client IP when operating behind a trusted proxy, always parse the last IP in the `x-forwarded-for` chain (e.g., using `.pop()`), assuming `x-real-ip` is not available.
+
+## 2024-05-24 - [Puppeteer TLS Validation Missing]
+**Vulnerability:** The Puppeteer instance in production was configured with `ignoreHTTPSErrors: true`, disabling TLS certificate verification.
+**Learning:** This setting disables strict TLS certificate validation for Puppeteer, exposing the application to Man-in-the-Middle (MitM) attacks.
+**Prevention:** Never use `ignoreHTTPSErrors: true` in production Puppeteer launch options unless connecting to internal corporate resources with custom root CAs (and even then, prefer providing the CA bundle).
