@@ -1,5 +1,6 @@
+// @spec src/specs/lib/rate-limit.spec.md
 import { describe, it, expect } from 'vitest';
-import { checkRateLimit, MAX_TRACKED_IPS } from './rate-limit';
+import { checkRateLimit, getClientIp, MAX_TRACKED_IPS } from './rate-limit';
 
 describe('Rate Limiter', () => {
     it('should allow requests within the limit', () => {
@@ -66,5 +67,36 @@ describe('Rate Limiter', () => {
 
         // `test-ip-0` was evicted. Its rate limit history is gone, so a new request from it should be allowed.
         expect(checkRateLimit(`test-ip-0`, limit, windowMs)).toBe(true);
+    });
+});
+
+describe('getClientIp', () => {
+    const makeRequest = (headers: Record<string, string>) =>
+        new Request('http://localhost/', { headers });
+
+    it('should prefer x-real-ip over x-forwarded-for', () => {
+        const req = makeRequest({
+            'x-real-ip': '10.0.0.1',
+            'x-forwarded-for': '1.2.3.4, 5.6.7.8',
+        });
+        expect(getClientIp(req)).toBe('10.0.0.1');
+    });
+
+    it('should take the last IP in x-forwarded-for list (anti-spoofing)', () => {
+        // The first IP can be spoofed by the attacker; the last is added by the trusted proxy.
+        const req = makeRequest({
+            'x-forwarded-for': 'spoofed-ip, real-proxy-ip, 203.0.113.42',
+        });
+        expect(getClientIp(req)).toBe('203.0.113.42');
+    });
+
+    it('should return "unknown" when no IP headers are present', () => {
+        const req = makeRequest({});
+        expect(getClientIp(req)).toBe('unknown');
+    });
+
+    it('should handle a single IP in x-forwarded-for', () => {
+        const req = makeRequest({ 'x-forwarded-for': '192.168.1.100' });
+        expect(getClientIp(req)).toBe('192.168.1.100');
     });
 });
