@@ -27,3 +27,8 @@
 **Vulnerability:** The application's rate limiting logic blindly trusted the first IP address in the `x-forwarded-for` header (`forwardedFor.split(',')[0]`). This allowed attackers to bypass rate limits by explicitly providing an `x-forwarded-for` header with a spoofed or rotating IP address.
 **Learning:** In typical reverse proxy setups, the proxy appends the real client IP to the end of the `x-forwarded-for` list. Trusting the first IP leaves the system vulnerable to spoofing.
 **Prevention:** To securely extract the real client IP when operating behind a trusted proxy, always parse the last IP in the `x-forwarded-for` chain (e.g., using `.pop()`), assuming `x-real-ip` is not available.
+
+## 2026-04-15 - Prevent MitM via Insecure Puppeteer Config
+**Vulnerability:** The `ignoreHTTPSErrors: true` flag was used in the production `puppeteer.launch` options in `src/lib/browser.ts`.
+**Learning:** Disabling TLS certificate validation in production environments exposes the browser session (and any data it handles, such as external logins or sensitive scraping data) to Man-in-the-Middle (MitM) attacks. This flag is often used as a convenience during local development with self-signed certs but should never make it to production.
+**Prevention:** Ensure `ignoreHTTPSErrors` is strictly omitted (or explicitly set to `false`) for production browser launch configurations, enforcing strong certificate validation.
