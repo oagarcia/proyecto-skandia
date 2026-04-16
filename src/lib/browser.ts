@@ -33,7 +33,8 @@ export async function getBrowser(): Promise<Browser> {
                 'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar'
             ),
             headless: true,
-            ignoreHTTPSErrors: true,
+            // 🛡️ SENTINEL: Removed ignoreHTTPSErrors: true to enforce strict TLS certificate validation
+            // and prevent Man-in-the-Middle (MitM) attacks in production.
         };
     }
 
