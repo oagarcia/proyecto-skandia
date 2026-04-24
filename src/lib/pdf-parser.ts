@@ -4,6 +4,8 @@ const pdf = require('pdf-parse/lib/pdf-parse.js');
  * Pure function that extracts holding names from the raw text of a PDF.
  * Exported for testability — no I/O, no side effects.
  */
+const TYPE_KEYWORDS_REGEX = /\s*(?:Rv\. Internacional|Derivados|Liquidez|Fondo Internacional|Financiero Local).*/;
+
 export function extractHoldingsFromText(text: string): string[] {
     const startMarker = "Principales inversiones del portafolio";
     const startIndex = text.indexOf(startMarker);
@@ -32,16 +34,9 @@ export function extractHoldingsFromText(text: string): string[] {
             if (holdings.length >= 10) break;
 
             if (/\d+\.\d+%$/.test(line)) {
-                let cleanLine = line.replace(/\s+\d+\.\d+%$/, '');
+                const cleanLine = line.replace(/\s+\d+\.\d+%$/, '');
 
-                const typeKeywords = ["Rv. Internacional", "Derivados", "Liquidez", "Fondo Internacional", "Financiero Local"];
-                let name = cleanLine;
-                for (const keyword of typeKeywords) {
-                    const idx = name.indexOf(keyword);
-                    if (idx !== -1) {
-                        name = name.substring(0, idx).trim();
-                    }
-                }
+                const name = cleanLine.replace(TYPE_KEYWORDS_REGEX, '').trim();
 
                 if (name.length > 3) {
                     holdings.push(name);
