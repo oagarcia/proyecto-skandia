@@ -221,43 +221,48 @@ Rentabilidades:
             'gemini-flash-latest'
         ];
 
-        let lastError;
+        try {
+            const resultObj = await Promise.any(
+                modelsToTry.map(async (modelName) => {
+                    try {
+                        console.log(`Attempting to generate with model: ${modelName} `);
+                        // Disable Google Search Grounding since we are manually injecting news
+                        const model = genAI.getGenerativeModel({
+                            model: modelName
+                        });
 
-        for (const modelName of modelsToTry) {
-            try {
-                console.log(`Attempting to generate with model: ${modelName} `);
-                // Disable Google Search Grounding since we are manually injecting news
-                const model = genAI.getGenerativeModel({
-                    model: modelName
-                });
+                        const result = await model.generateContent(parts);
+                        const response = await result.response;
+                        const text = response.text();
 
-                const result = await model.generateContent(parts);
-                const response = await result.response;
-                const text = response.text();
+                        return {
+                            analysis: text,
+                            modelUsed: modelName
+                        };
+                    } catch (error: unknown) {
+                        // SENTINEL: Do not log or leak detailed error messages to user context. Just log it.
+                        console.warn(`Failed with model ${modelName}: `, error);
+                        throw error;
+                    }
+                })
+            );
 
-                return NextResponse.json({
-                    success: true,
-                    analysis: text,
-                    modelUsed: modelName,
-                    pdfUrl: pdfUrl
-                });
+            return NextResponse.json({
+                success: true,
+                analysis: resultObj.analysis,
+                modelUsed: resultObj.modelUsed,
+                pdfUrl: pdfUrl
+            });
+        } catch (aggregateError: unknown) {
+            // If all failed
+            console.error('All models failed. Aggregate error:', aggregateError);
 
-            } catch (error: unknown) {
-                // SENTINEL: Do not log or leak detailed error messages to user context. Just log it.
-                console.warn(`Failed with model ${modelName}: `, error);
-                lastError = error;
-                // Continue to next model
-            }
+            // SECURE ERROR HANDLING: Avoid leaking model lists or internal error details
+            return NextResponse.json({
+                success: false,
+                error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
+            }, { status: 500 });
         }
-
-        // If all failed
-        console.error('All models failed. Last error:', lastError);
-
-        // SECURE ERROR HANDLING: Avoid leaking model lists or internal error details
-        return NextResponse.json({
-            success: false,
-            error: 'Failed to generate analysis with available models. Please check your API key permissions or try again later.'
-        }, { status: 500 });
 
     } catch (error: unknown) {
         console.error('Gemini API Error:', error);
