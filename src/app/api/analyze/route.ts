@@ -239,7 +239,8 @@ Rentabilidades:
                     success: true,
                     analysis: text,
                     modelUsed: modelName,
-                    pdfUrl: pdfUrl
+                    // pdfUrl: pdfUrl // original raw url doesnt work on iPhone, need to open like a blob due to puppeter security and cookie handling
+                    pdfUrl: pdfBase64 ? `data:application/pdf;base64,${pdfBase64}` : null // base64 embeded pdf
                 });
 
             } catch (error: unknown) {

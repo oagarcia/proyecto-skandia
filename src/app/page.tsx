@@ -26,6 +26,32 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+function downloadPdfDataUrl(pdfUrl: string, portfolioName: string) {
+  if (pdfUrl.startsWith('data:')) {
+    const parts = pdfUrl.split(';base64,');
+    const contentType = parts[0].split(':')[1];
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i);
+    }
+    const blob = new Blob([uInt8Array], { type: contentType });
+    const blobUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `Ficha_Tecnica_${portfolioName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } else {
+    window.open(pdfUrl, '_blank');
+  }
+}
+
 interface Portfolio {
   id: string;
   name: string;
@@ -221,15 +247,13 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
               Análisis AI: {portfolio.name}
             </h2>
             {pdfUrl && (
-              <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-emerald-400 hover:text-emerald-300 underline mt-1 block flex items-center gap-1"
+              <button
+                onClick={() => downloadPdfDataUrl(pdfUrl, portfolio.name)}
+                className="text-xs text-emerald-400 hover:text-emerald-300 underline mt-1 block flex items-center gap-1 bg-transparent border-none cursor-pointer p-0"
               >
                 <FileText size={12} />
-                Ver Ficha Técnica (PDF)
-              </a>
+                Descargar Ficha Técnica (PDF)
+              </button>
             )}
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
