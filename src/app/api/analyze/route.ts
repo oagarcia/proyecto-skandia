@@ -131,6 +131,8 @@ export async function POST(request: Request) {
 
             console.log(`[Analyze API] News fetched(length: ${newsContext.length})`);
 
+            // SENTINEL: Sanitize untrusted external data to prevent Indirect Prompt Injection breakout
+            newsContext = newsContext.replace(/<\/?noticias_externas[^>]*>/gi, '');
 
         } catch (error) {
             console.error('[Analyze API] Error fetching news:', error);
