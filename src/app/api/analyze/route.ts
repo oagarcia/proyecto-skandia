@@ -136,6 +136,12 @@ export async function POST(request: Request) {
             console.error('[Analyze API] Error fetching news:', error);
             newsContext = "No se pudieron obtener noticias en tiempo real.";
         }
+
+        // 🛡️ SENTINEL: Mitigate Indirect Prompt Injection
+        // Sanitize the external news context to prevent breakout attacks from the <noticias_externas> tags.
+        // We strip any occurrences of <noticias_externas> or </noticias_externas> from the untrusted data.
+        const sanitizedNewsContext = newsContext.replace(/<\/?noticias_externas[^>]*>/gi, '');
+
         let prompt = `
       Actúa como un analista financiero senior.Analiza el siguiente portafolio de inversión de Skandia Colombia:
 
@@ -188,7 +194,7 @@ Rentabilidades:
       
       ${newsSourceLabel}:
       <noticias_externas>
-      ${newsContext}
+      ${sanitizedNewsContext}
       </noticias_externas>
       
       Instrucciones OBLIGATORIAS para esta sección:
