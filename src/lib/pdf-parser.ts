@@ -16,12 +16,15 @@ export function extractHoldingsFromText(text: string): string[] {
     }
 
     const sectionText = text.slice(startIndex);
-    const lines = sectionText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+    const lines = sectionText.split('\n');
 
     const holdings: string[] = [];
     let capturing = false;
 
-    for (const line of lines) {
+    for (let line of lines) {
+        line = line.trim();
+        if (line.length === 0) continue;
+
         if (line.includes(startMarker)) {
             capturing = true;
             continue;
