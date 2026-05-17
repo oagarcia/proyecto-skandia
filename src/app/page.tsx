@@ -48,7 +48,9 @@ function downloadPdfDataUrl(pdfUrl: string, portfolioName: string) {
 
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   } else {
-    window.open(pdfUrl, '_blank');
+    // 🛡️ SENTINEL: Sanitize the URL to prevent DOM XSS via 'javascript:' URIs
+    // and use 'noopener,noreferrer' to prevent Reverse Tabnabbing attacks.
+    window.open(sanitizeUrl(pdfUrl), '_blank', 'noopener,noreferrer');
   }
 }
 
