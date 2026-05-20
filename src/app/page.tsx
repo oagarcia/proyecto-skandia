@@ -7,6 +7,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import { aiSettings } from '@/config/ai-settings';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 function sanitizeUrl(url: string | undefined): string {
   if (!url) return '#';
@@ -106,7 +107,15 @@ const ReturnItem = ({ label, value }: { label: string, value: string }) => {
   );
 };
 
-const PortfolioCard = ({ portfolio }: { portfolio: Portfolio }) => {
+const PortfolioCard = ({ 
+  portfolio, 
+  onOpenChart, 
+  onOpenAnalysis 
+}: { 
+  portfolio: Portfolio; 
+  onOpenChart: () => void; 
+  onOpenAnalysis: () => void; 
+}) => {
 
   return (
     <motion.div
@@ -130,6 +139,31 @@ const PortfolioCard = ({ portfolio }: { portfolio: Portfolio }) => {
         <ReturnItem label="Mes" value={portfolio.returns.monthly} />
         <ReturnItem label="6 Meses" value={portfolio.returns.sixMonths} />
         <ReturnItem label="Año (YTD)" value={portfolio.returns.yearly} />
+      </div>
+
+      <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenChart();
+          }}
+          className="flex-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black py-2 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-sm"
+        >
+          <TrendingUp size={14} />
+          Ver Gráfico
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenAnalysis();
+          }}
+          className="flex-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-2 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 border border-purple-500/20 shadow-sm"
+        >
+          <BrainCircuit size={14} />
+          Análisis IA
+        </button>
       </div>
     </motion.div>
   );
@@ -378,6 +412,231 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
   );
 };
 
+interface ChartDataPoint {
+  Date: string;
+  Value: number;
+}
+
+const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () => void }) => {
+  const [period, setPeriod] = useState<'P1' | 'P2' | 'P3' | 'P4'>('P4');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [chartData, setChartData] = useState<{ Date: string; formattedDate: string; Value: number }[]>([]);
+  const [stats, setStats] = useState<{ var: number; label: string } | null>(null);
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const safeId = portfolio.id.replace(/[^A-Z0-9_]/g, '');
+        const res = await fetch(`/api/skandia/series?id=${safeId}&period=${period}`);
+        const json = await res.json();
+
+        if (json.success && json.data) {
+          setStats({
+            var: json.data.var || 0,
+            label: json.data.label || ''
+          });
+
+          const rawSeries = json.data.series || [];
+          const formattedSeries = rawSeries.map((item: any) => {
+            const dateObj = new Date(item.Date);
+            let formattedDate = '';
+            if (period === 'P1') {
+              formattedDate = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+            } else if (period === 'P2') {
+              formattedDate = dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+            } else {
+              formattedDate = dateObj.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
+            }
+
+            return {
+              Date: item.Date,
+              formattedDate,
+              Value: parseFloat(item.Value) || 0
+            };
+          });
+
+          setChartData(formattedSeries);
+        } else {
+          setError(json.error || 'No se pudieron obtener los datos históricos.');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Error de conexión al cargar el gráfico.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChartData();
+  }, [portfolio.id, period]);
+
+  const periodsList = [
+    { id: 'P1', label: '1 Día' },
+    { id: 'P2', label: '1 Mes' },
+    { id: 'P3', label: '180 Días' },
+    { id: 'P4', label: '1 Año' }
+  ] as const;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-3xl w-full p-6 shadow-2xl shadow-emerald-500/10 flex flex-col relative animate-in fade-in zoom-in-95 duration-200"
+      >
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <div className="text-[10px] text-emerald-500 font-mono mb-1 uppercase tracking-wider">{portfolio.category}</div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <TrendingUp className="text-emerald-400" />
+              Histórico: {portfolio.name}
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Sigla: <span className="font-mono text-slate-300">{portfolio.id}</span> • Valor Fondo: <span className="text-slate-300 font-semibold">{portfolio.value} M</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="flex justify-between items-center gap-4 bg-slate-950/60 p-1.5 rounded-xl border border-white/5 mb-6">
+          <div className="flex gap-1">
+            {periodsList.map((item) => {
+              const active = period === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setPeriod(item.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-300 relative",
+                    active
+                      ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/10 font-bold"
+                      : "text-slate-400 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {stats && !loading && (
+            <div className="text-right mr-2 hidden sm:block">
+              <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">Variación Período</span>
+              <span className={cn("text-sm font-bold", stats.var >= 0 ? "text-emerald-400" : "text-red-400")}>
+                {stats.var >= 0 ? '+' : ''}{stats.var.toFixed(2)}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-slate-950/40 rounded-xl border border-white/5 p-4 h-72 flex items-center justify-center relative">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center space-y-3">
+              <RefreshCw className="animate-spin text-emerald-500" size={36} />
+              <p className="text-xs text-slate-500">Cargando histórico...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center p-4">
+              <AlertTriangle className="text-red-400 mx-auto mb-2" size={32} />
+              <p className="text-sm text-red-400">{error}</p>
+              <button
+                type="button"
+                onClick={() => setPeriod(period)}
+                className="mt-3 text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-white/10 transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : chartData.length === 0 ? (
+            <p className="text-xs text-slate-500">No hay datos históricos disponibles en este período.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                <XAxis
+                  dataKey="formattedDate"
+                  stroke="#ffffff40"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#ffffff40"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={['auto', 'auto']}
+                  tickFormatter={(val) => Math.round(val).toLocaleString('es-CO')}
+                />
+                <RechartsTooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const dataPoint = payload[0].payload;
+                      const dateObj = new Date(dataPoint.Date);
+                      const formattedFullDate = dateObj.toLocaleDateString('es-CO', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      });
+
+                      return (
+                        <div className="bg-slate-900/95 border border-white/10 p-3 rounded-lg shadow-xl backdrop-blur-md">
+                          <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider mb-1">
+                            {formattedFullDate}
+                          </p>
+                          <p className="text-sm font-bold text-white">
+                            Índice: <span className="text-emerald-400 font-mono font-black">{payload[0].value?.toLocaleString('es-CO')}</span>
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Value"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorValue)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="flex justify-between items-center mt-6 text-[10px] text-slate-500">
+          <p>
+            * El gráfico muestra el crecimiento unitario indexado a base inicial 1000.
+          </p>
+          {stats && (
+            <p className="font-mono text-slate-400">
+              Rango: {stats.label}
+            </p>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 // Reusable Filter Tabs Component
 const FilterTabs = ({ items, selected, onToggle, label }: { items: string[], selected: string[], onToggle: (item: string) => void, label?: string }) => (
   <div className="flex flex-col gap-2 mb-4">
@@ -416,6 +675,7 @@ export default function Home() {
   const [filterRisk, setFilterRisk] = useState<string>('All');
   const [error, setError] = useState<string | null>(null);
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null);
+  const [selectedChartPortfolio, setSelectedChartPortfolio] = useState<Portfolio | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -564,30 +824,57 @@ export default function Home() {
               <div className="overflow-x-auto pb-4 momentum-scroll snap-x snap-mandatory">
                 <div className="flex gap-4 min-w-max px-1">
                   {rankedPortfolios.map((p, index) => (
-                    <div key={p.id} className="w-64 bg-slate-900 border border-white/10 rounded-xl p-4 hover:border-emerald-500/50 transition-colors cursor-pointer group snap-start" onClick={() => setSelectedPortfolio(p)}>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-emerald-500 font-bold text-lg">#{index + 1}</span>
-                        <RiskBadge risk={p.risk} />
-                      </div>
-                      <h3 title={p.name} className="font-semibold truncate mb-2 group-hover:text-emerald-400 text-sm">{p.name}</h3>
+                    <div key={p.id} className="w-64 bg-slate-900 border border-white/10 rounded-xl p-4 hover:border-emerald-500/50 transition-all duration-300 group snap-start flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-emerald-500 font-bold text-lg">#{index + 1}</span>
+                          <RiskBadge risk={p.risk} />
+                        </div>
+                        <h3 title={p.name} className="font-semibold truncate mb-2 group-hover:text-emerald-400 text-sm text-white">{p.name}</h3>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-[10px] text-slate-500">Año</p>
-                          <ReturnValue value={p.returns.yearly} className="text-sm font-bold" />
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <div>
+                            <p className="text-[10px] text-slate-500">Año</p>
+                            <ReturnValue value={p.returns.yearly} className="text-sm font-bold" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500">Mes</p>
+                            <ReturnValue value={p.returns.monthly} className="text-sm font-bold" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500">6M</p>
+                            <ReturnValue value={p.returns.sixMonths} className="text-sm font-bold" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500">Día</p>
+                            <ReturnValue value={p.returns.daily} className="text-sm font-bold" />
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] text-slate-500">Mes</p>
-                          <ReturnValue value={p.returns.monthly} className="text-sm font-bold" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-500">6M</p>
-                          <ReturnValue value={p.returns.sixMonths} className="text-sm font-bold" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-500">Día</p>
-                          <ReturnValue value={p.returns.daily} className="text-sm font-bold" />
-                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-3 border-t border-white/5 mt-auto">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedChartPortfolio(p);
+                          }}
+                          className="flex-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300 flex items-center justify-center gap-1 border border-emerald-500/20"
+                        >
+                          <TrendingUp size={12} />
+                          Gráfico
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPortfolio(p);
+                          }}
+                          className="flex-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300 flex items-center justify-center gap-1 border border-purple-500/20"
+                        >
+                          <BrainCircuit size={12} />
+                          Análisis
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -655,24 +942,24 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPortfolios.map(portfolio => (
-                <div key={portfolio.id} className="relative">
-                  <PortfolioCard portfolio={portfolio} />
-                  <button
-                    onClick={() => setSelectedPortfolio(portfolio)}
-                    className="absolute bottom-4 right-4 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 border border-emerald-500/20"
-                  >
-                    <BrainCircuit size={14} />
-                    Análisis con IA
-                  </button>
+                <div key={portfolio.id}>
+                  <PortfolioCard
+                    portfolio={portfolio}
+                    onOpenChart={() => setSelectedChartPortfolio(portfolio)}
+                    onOpenAnalysis={() => setSelectedPortfolio(portfolio)}
+                  />
                 </div>
               ))}
             </div>
           )}
         </section>
 
-        {/* Modal */}
+        {/* Modals */}
         {selectedPortfolio && (
           <AnalysisModal portfolio={selectedPortfolio} onClose={() => setSelectedPortfolio(null)} />
+        )}
+        {selectedChartPortfolio && (
+          <ChartModal portfolio={selectedChartPortfolio} onClose={() => setSelectedChartPortfolio(null)} />
         )}
       </div>
     </main>

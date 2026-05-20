@@ -87,52 +87,44 @@ export async function GET(request: Request) {
         // #tableData2 -> Portafolios a la Medida
         // #tableData3 -> Portafolios Especiales
 
-        await page.waitForSelector('#tableData1', { timeout: 10000 });
+        await page.waitForSelector('div[id^="numberOfRow"]', { timeout: 10000 });
 
         const portfolios = await page.evaluate(() => {
+            const win = window as any;
+            if (typeof win.data === 'undefined') return [];
             const results: any[] = [];
+            const cat = win.data['0']; // Only 'Skandia Pensiones y Cesantías S.A.' is displayed in the tables
+            if (!cat || !cat.Products) return [];
 
-            const categories = [
-                { id: 'tableData1', name: 'Portafolios Abiertos' },
-                { id: 'tableData2', name: 'Portafolios a la Medida' },
-                { id: 'tableData3', name: 'Portafolios Especiales' }
-            ];
+            const formatReturn = (val: any) => {
+                if (!val) return '0%';
+                const str = String(val).trim();
+                if (str === '' || str === '%') return '0%';
+                if (str.endsWith('%')) return str;
+                return str + '%';
+            };
 
-            categories.forEach(cat => {
-                const container = document.getElementById(cat.id);
-                if (!container) return;
-
-                const rows = container.querySelectorAll('div[id^="numberOfRow"]');
-
-                rows.forEach(row => {
-                    const name = row.querySelector('.nombreLargo')?.textContent?.trim() || '';
-                    const type = row.querySelector('.tipoInversion')?.textContent?.trim() || '';
-                    const valueStr = row.querySelector('.valorFondo')?.textContent?.trim() || '0';
-
-                    // Risk
-                    const riskImg = row.querySelector('.perfilRiesgo img')?.getAttribute('src') || '';
+            cat.Products.forEach((p: any) => {
+                if (!p.Portfolios) return;
+                p.Portfolios.forEach((port: any) => {
                     let risk = 'Unknown';
-                    if (riskImg.includes('pRiesgo1')) risk = 'Conservador';
-                    if (riskImg.includes('pRiesgo2')) risk = 'Moderado';
-                    if (riskImg.includes('pRiesgo3')) risk = 'Agresivo';
-
-                    // Returns (1 Day, 30 Days, 180 Days, 365 Days)
-                    const dayDivs = row.querySelectorAll('.days');
-                    const returns = {
-                        daily: dayDivs[0]?.textContent?.trim() || '0%',
-                        monthly: dayDivs[1]?.textContent?.trim() || '0%',
-                        sixMonths: dayDivs[2]?.textContent?.trim() || '0%',
-                        yearly: dayDivs[3]?.textContent?.trim() || '0%',
-                    };
+                    if (port.ProfileRisk === '1') risk = 'Conservador';
+                    if (port.ProfileRisk === '2') risk = 'Moderado';
+                    if (port.ProfileRisk === '3') risk = 'Agresivo';
 
                     results.push({
-                        id: row.id,
-                        category: cat.name, // Add category field
-                        name,
-                        type,
-                        value: valueStr,
+                        id: port.Id, // Real portfolio sigla (e.g. OMACTE)
+                        category: p.ProductName, // e.g. "Portafolios Abiertos"
+                        name: port.LongName || '',
+                        type: port.Clasification || 'Unknown',
+                        value: port.FundValueForExcel || '0',
                         risk,
-                        returns
+                        returns: {
+                            daily: formatReturn(port.UnitValueDay1),
+                            monthly: formatReturn(port.UnitValueDay30),
+                            sixMonths: formatReturn(port.UnitValueDay180),
+                            yearly: formatReturn(port.UnitValueDay365)
+                        }
                     });
                 });
             });
