@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
         // --- AWAIT RESULTS ---
         // We await the PDF result first as it might be needed for fallback logic
-        const { pdfBase64, pdfUrl } = await pdfPromise;
+        const { pdfBase64 } = await pdfPromise;
 
         let newsContext = "";
         let newsSourceLabel = "CONTEXTO DE NOTICIAS RECIENTES (Obtenido vía Google News)";
@@ -228,22 +228,31 @@ Rentabilidades:
         ];
 
         try {
-            // ⚡ PERFORMANCE: Run models in parallel using Promise.any to improve latency
-            const generatePromises = modelsToTry.map(async (modelName) => {
-                console.log(`Attempting to generate with model: ${modelName} `);
-                const model = genAI.getGenerativeModel({ model: modelName });
+            // ⚡ PERFORMANCE: Run models sequentially to avoid redundant API calls and rate limits.
+            // We stop at the first successful generation.
+            let winner: { text: string; modelName: string } | null = null;
+            const errors: unknown[] = [];
 
-                const result = await model.generateContent(parts);
-                const response = await result.response;
-                const text = response.text();
+            for (const modelName of modelsToTry) {
+                try {
+                    console.log(`Attempting to generate with model: ${modelName} `);
+                    const model = genAI.getGenerativeModel({ model: modelName });
 
-                return {
-                    text,
-                    modelName
-                };
-            });
+                    const result = await model.generateContent(parts);
+                    const response = await result.response;
+                    const text = response.text();
 
-            const winner = await Promise.any(generatePromises);
+                    winner = { text, modelName };
+                    break; // Stop immediately on success
+                } catch (e: unknown) {
+                    console.warn(`[Analyze API] Model ${modelName} failed, falling back if available.`);
+                    errors.push(e);
+                }
+            }
+
+            if (!winner) {
+                throw new AggregateError(errors, 'All models failed to generate content');
+            }
 
             return NextResponse.json({
                 success: true,
