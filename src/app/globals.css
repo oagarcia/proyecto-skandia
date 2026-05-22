@@ -45,3 +45,80 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Dialog animations using modern CSS features */
+dialog {
+  opacity: 0;
+  transform: translateY(20px) scale(0.96);
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.35s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1); /* Premium Apple-like smooth transition */
+  transition-behavior: allow-discrete;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: auto;
+  outline: none;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+dialog[open] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+}
+
+/* Dialog Backdrop styling and animation */
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  transition:
+    display 0.35s allow-discrete,
+    overlay 0.35s allow-discrete,
+    background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    backdrop-filter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+dialog[open]::backdrop {
+  background-color: rgba(2, 6, 17, 0.8); /* Beautiful dark backdrop */
+  backdrop-filter: blur(12px);
+
+  @starting-style {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+  }
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  dialog {
+    transform: none !important;
+    transition-duration: 0.1s;
+  }
+
+  dialog[open] {
+    transform: none !important;
+    
+    @starting-style {
+      transform: none !important;
+    }
+  }
+  
+  dialog::backdrop {
+    transition-duration: 0.1s;
+    backdrop-filter: none !important;
+  }
+  
+  dialog[open]::backdrop {
+    backdrop-filter: none !important;
+    
+    @starting-style {
+      backdrop-filter: none !important;
+    }
+  }
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, RefreshCw, X, BrainCircuit, AlertTriangle, CheckCircle, FileText, Activity } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -187,6 +187,63 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [isValidating, setIsValidating] = useState(false);
 
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  const handleClose = () => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const handleTransitionEnd = (e: TransitionEvent) => {
+      if (e.target === dialog) {
+        dialog.removeEventListener('transitionend', handleTransitionEnd);
+        onClose();
+      }
+    };
+    dialog.addEventListener('transitionend', handleTransitionEnd);
+
+    setTimeout(() => {
+      onClose();
+    }, 400); // fallback in case transitionend doesn't fire
+
+    dialog.close();
+  };
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog) {
+      dialog.showModal();
+
+      const handleCancel = (e: Event) => {
+        e.preventDefault();
+        handleClose();
+      };
+
+      dialog.addEventListener('cancel', handleCancel);
+
+      return () => {
+        dialog.removeEventListener('cancel', handleCancel);
+      };
+    }
+  }, []);
+
+  const handleDialogClick = (event: React.MouseEvent<HTMLDialogElement>) => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (event.target === dialog) {
+      const rect = dialog.getBoundingClientRect();
+      const isDialogContent = (
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      );
+      if (!isDialogContent) {
+        handleClose();
+      }
+    }
+  };
+
   const handleValidateKey = async () => {
     if (!apiKey) return;
     setIsValidating(true);
@@ -270,146 +327,144 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl shadow-emerald-500/10 flex flex-col"
-      >
-        <div className="p-4 sm:p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-              <BrainCircuit className="text-emerald-400 shrink-0" size={20} />
-              <span className="truncate max-w-[200px] sm:max-w-none">Análisis AI: {portfolio.name}</span>
-            </h2>
-            {pdfUrl && (
-              <button
-                onClick={() => downloadPdfDataUrl(pdfUrl, portfolio.name)}
-                className="text-xs text-emerald-400 hover:text-emerald-300 underline mt-1 block flex items-center gap-1 bg-transparent border-none cursor-pointer p-0"
-              >
-                <FileText size={12} />
-                Descargar Ficha Técnica (PDF)
-              </button>
-            )}
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-4 sm:p-6 space-y-6 grow overflow-y-auto">
-          {!analysis && !loading && (
-            <div className="flex flex-col gap-4">
-              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-blue-200 text-sm">
-                <p className="flex items-center gap-2 font-semibold mb-2">
-                  <AlertTriangle size={16} />
-                  Requiere Gemini API Key
-                </p>
-                <p className="text-xs sm:text-sm">Para realizar un análisis con IA generativa, necesitas una API Key de Google Gemini. Tu llave se guardará localmente en tu navegador por lo que no se recomienda usar un dispositivo compartido.</p>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="password"
-                    placeholder="Ingresa tu Gemini API Key"
-                    value={apiKey}
-                    onChange={(e) => {
-                      setApiKey(e.target.value);
-                      setModels([]); // Reset models when key changes
-                      setSelectedModel('');
-                    }}
-                    className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-sm"
-                  />
-                  <button
-                    onClick={handleValidateKey}
-                    disabled={!apiKey || isValidating}
-                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
-                  >
-                    {isValidating ? <RefreshCw className="animate-spin" size={16} /> : 'Validar'}
-                  </button>
-                </div>
-
-
-                {models.length > 0 && (
-                  <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
-                    <label className="text-sm text-slate-400">Selecciona el Modelo:</label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <select
-                        value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value)}
-                        className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-white w-full"
-                      >
-                        {models.map(model => {
-                          const isAllowed = !aiSettings.restrictModels || aiSettings.allowedModels.includes(model);
-                          return (
-                            <option key={model} value={model} disabled={!isAllowed}>
-                              {model} {!isAllowed ? '(No disponible)' : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <button
-                        onClick={handleAnalyze}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
-                      >
-                        <BrainCircuit size={18} />
-                        Analizar
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+    <dialog
+      ref={dialogRef}
+      onClick={handleDialogClick}
+      className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl shadow-emerald-500/10 flex flex-col p-0 text-white outline-none"
+    >
+      <div className="p-4 sm:p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10">
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <BrainCircuit className="text-emerald-400 shrink-0" size={20} />
+            <span className="truncate max-w-[200px] sm:max-w-none">Análisis AI: {portfolio.name}</span>
+          </h2>
+          {pdfUrl && (
+            <button
+              onClick={() => downloadPdfDataUrl(pdfUrl, portfolio.name)}
+              className="text-xs text-emerald-400 hover:text-emerald-300 underline mt-1 block flex items-center gap-1 bg-transparent border-none cursor-pointer p-0"
+            >
+              <FileText size={12} />
+              Descargar Ficha Técnica (PDF)
+            </button>
           )}
+        </div>
+        <button onClick={handleClose} className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5">
+          <X size={20} />
+        </button>
+      </div>
 
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <RefreshCw className="animate-spin text-emerald-500" size={48} />
-              <p className="text-slate-400 animate-pulse text-center">
-                Generando análisis financiero detallado...<br />
-                <span className="text-xs text-slate-500">(Obteniendo Ficha Técnica PDF, esto puede tomar unos segundos)</span>
+      <div className="p-4 sm:p-6 space-y-6 grow overflow-y-auto">
+        {!analysis && !loading && (
+          <div className="flex flex-col gap-4">
+            <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-blue-200 text-sm">
+              <p className="flex items-center gap-2 font-semibold mb-2">
+                <AlertTriangle size={16} />
+                Requiere Gemini API Key
               </p>
+              <p className="text-xs sm:text-sm">Para realizar un análisis con IA generativa, necesitas una API Key de Google Gemini. Tu llave se guardará localmente en tu navegador por lo que no se recomienda usar un dispositivo compartido.</p>
             </div>
-          )}
 
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-center">
-              {error}
-            </div>
-          )}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="password"
+                  placeholder="Ingresa tu Gemini API Key"
+                  value={apiKey}
+                  onChange={(e) => {
+                    setApiKey(e.target.value);
+                    setModels([]); // Reset models when key changes
+                    setSelectedModel('');
+                  }}
+                  className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-sm"
+                />
+                <button
+                  onClick={handleValidateKey}
+                  disabled={!apiKey || isValidating}
+                  className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  {isValidating ? <RefreshCw className="animate-spin" size={16} /> : 'Validar'}
+                </button>
+              </div>
 
-          {analysis && (
-            <div className="prose prose-invert prose-emerald max-w-none">
-              <ReactMarkdown
-                components={{
-                  h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-8 mb-4 text-emerald-400" {...props} />,
-                  h2: ({ ...props }) => <h2 className="text-xl font-bold mt-6 mb-3 text-emerald-300 border-b border-white/10 pb-2" {...props} />,
-                  h3: ({ ...props }) => <h3 className="text-lg font-bold mt-5 mb-2 text-emerald-200" {...props} />,
-                  p: ({ ...props }) => <p className="mb-4 leading-relaxed text-slate-300" {...props} />,
-                  ul: ({ ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
-                  li: ({ ...props }) => <li className="pl-1" {...props} />,
-                  strong: ({ ...props }) => <strong className="text-white font-semibold" {...props} />,
-                  a: ({ ...props }) => (
-                    <a
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"
-                      {...props}
-                      href={sanitizeUrl(props.href)}
+
+              {models.length > 0 && (
+                <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-sm text-slate-400">Selecciona el Modelo:</label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-white w-full"
                     >
-                      {props.children}
-                    </a>
-                  ),
-                }}
-              >
-                {analysis}
-              </ReactMarkdown>
+                      {models.map(model => {
+                        const isAllowed = !aiSettings.restrictModels || aiSettings.allowedModels.includes(model);
+                        return (
+                          <option key={model} value={model} disabled={!isAllowed}>
+                            {model} {!isAllowed ? '(No disponible)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <button
+                      onClick={handleAnalyze}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
+                    >
+                      <BrainCircuit size={18} />
+                      Analizar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <RefreshCw className="animate-spin text-emerald-500" size={48} />
+            <p className="text-slate-400 animate-pulse text-center">
+              Generando análisis financiero detallado...<br />
+              <span className="text-xs text-slate-500">(Obteniendo Ficha Técnica PDF, esto puede tomar unos segundos)</span>
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-center">
+            {error}
+          </div>
+        )}
+
+        {analysis && (
+          <div className="prose prose-invert prose-emerald max-w-none">
+            <ReactMarkdown
+              components={{
+                h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-8 mb-4 text-emerald-400" {...props} />,
+                h2: ({ ...props }) => <h2 className="text-xl font-bold mt-6 mb-3 text-emerald-300 border-b border-white/10 pb-2" {...props} />,
+                h3: ({ ...props }) => <h3 className="text-lg font-bold mt-5 mb-2 text-emerald-200" {...props} />,
+                p: ({ ...props }) => <p className="mb-4 leading-relaxed text-slate-300" {...props} />,
+                ul: ({ ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-slate-300" {...props} />,
+                li: ({ ...props }) => <li className="pl-1" {...props} />,
+                strong: ({ ...props }) => <strong className="text-white font-semibold" {...props} />,
+                a: ({ ...props }) => (
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"
+                    {...props}
+                    href={sanitizeUrl(props.href)}
+                  >
+                    {props.children}
+                  </a>
+                ),
+              }}
+            >
+              {analysis}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+    </dialog>
   );
 };
 
@@ -447,6 +502,63 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
     return formatDateToYYYYMMDD(new Date());
   });
   const [searchRange, setSearchRange] = useState<{ start: string; end: string } | null>(null);
+
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  const handleClose = () => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const handleTransitionEnd = (e: TransitionEvent) => {
+      if (e.target === dialog) {
+        dialog.removeEventListener('transitionend', handleTransitionEnd);
+        onClose();
+      }
+    };
+    dialog.addEventListener('transitionend', handleTransitionEnd);
+
+    setTimeout(() => {
+      onClose();
+    }, 400); // fallback in case transitionend doesn't fire
+
+    dialog.close();
+  };
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog) {
+      dialog.showModal();
+
+      const handleCancel = (e: Event) => {
+        e.preventDefault();
+        handleClose();
+      };
+
+      dialog.addEventListener('cancel', handleCancel);
+
+      return () => {
+        dialog.removeEventListener('cancel', handleCancel);
+      };
+    }
+  }, []);
+
+  const handleDialogClick = (event: React.MouseEvent<HTMLDialogElement>) => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (event.target === dialog) {
+      const rect = dialog.getBoundingClientRect();
+      const isDialogContent = (
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      );
+      if (!isDialogContent) {
+        handleClose();
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchChartData = async () => {
@@ -528,31 +640,30 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl shadow-emerald-500/10 flex flex-col relative animate-in fade-in zoom-in-95 duration-200"
-      >
-        <div className="flex justify-between items-start gap-4 mb-6">
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] text-emerald-500 font-mono mb-1 uppercase tracking-wider">{portfolio.category}</div>
-            <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
-              <TrendingUp className="text-emerald-400 shrink-0" size={20} />
-              <span className="truncate">Histórico: {portfolio.name}</span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-1 truncate">
-              Sigla: <span className="font-mono text-slate-300">{portfolio.id}</span> • Valor Fondo: <span className="text-slate-300 font-semibold">{portfolio.value} M</span>
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 shrink-0"
-          >
-            <X size={20} />
-          </button>
+    <dialog
+      ref={dialogRef}
+      onClick={handleDialogClick}
+      className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto shadow-2xl shadow-emerald-500/10 flex flex-col p-4 sm:p-6 text-white outline-none"
+    >
+      <div className="flex justify-between items-start gap-4 mb-6">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] text-emerald-500 font-mono mb-1 uppercase tracking-wider">{portfolio.category}</div>
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
+            <TrendingUp className="text-emerald-400 shrink-0" size={20} />
+            <span className="truncate">Histórico: {portfolio.name}</span>
+          </h2>
+          <p className="text-xs text-slate-400 mt-1 truncate">
+            Sigla: <span className="font-mono text-slate-300">{portfolio.id}</span> • Valor Fondo: <span className="text-slate-300 font-semibold">{portfolio.value} M</span>
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 shrink-0"
+        >
+          <X size={20} />
+        </button>
+      </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-950/60 p-1.5 rounded-xl border border-white/5 mb-6">
           <div className="flex gap-1 overflow-x-auto scrollbar-none momentum-scroll pb-1 sm:pb-0">
@@ -611,7 +722,7 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
                 <button
                   type="button"
                   onClick={() => setSearchRange({ start: startDate, end: endDate })}
-                  disabled={!startDate || !endDate || loading || (startDate && endDate && new Date(startDate) > new Date(endDate))}
+                  disabled={!startDate || !endDate || loading || !!(startDate && endDate && new Date(startDate) > new Date(endDate))}
                   className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold text-xs px-5 py-2.5 rounded-lg transition-all w-full text-center"
                 >
                   Buscar
@@ -719,8 +830,7 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
             </p>
           )}
         </div>
-      </motion.div>
-    </div>
+    </dialog>
   );
 };
 
