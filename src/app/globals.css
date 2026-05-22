@@ -122,3 +122,9 @@ dialog[open]::backdrop {
     }
   }
 }
+
+/* Prevent background scrolling when a dialog is open using modern :has() selector */
+html:has(dialog[open]),
+body:has(dialog[open]) {
+  overflow: hidden;
+}

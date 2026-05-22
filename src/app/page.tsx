@@ -213,6 +213,12 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
     if (dialog) {
       dialog.showModal();
 
+      // Lock background scrolling on html and body
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+
       const handleCancel = (e: Event) => {
         e.preventDefault();
         handleClose();
@@ -222,6 +228,9 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
 
       return () => {
         dialog.removeEventListener('cancel', handleCancel);
+        // Restore background scrolling on unmount
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
       };
     }
   }, []);
@@ -529,6 +538,12 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
     if (dialog) {
       dialog.showModal();
 
+      // Lock background scrolling on html and body
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+
       const handleCancel = (e: Event) => {
         e.preventDefault();
         handleClose();
@@ -538,6 +553,9 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
 
       return () => {
         dialog.removeEventListener('cancel', handleCancel);
+        // Restore background scrolling on unmount
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
       };
     }
   }, []);
