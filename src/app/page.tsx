@@ -276,11 +276,11 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
         animate={{ scale: 1, opacity: 1 }}
         className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl shadow-emerald-500/10 flex flex-col"
       >
-        <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10">
+        <div className="p-4 sm:p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <BrainCircuit className="text-emerald-400" />
-              Análisis AI: {portfolio.name}
+            <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <BrainCircuit className="text-emerald-400 shrink-0" size={20} />
+              <span className="truncate max-w-[200px] sm:max-w-none">Análisis AI: {portfolio.name}</span>
             </h2>
             {pdfUrl && (
               <button
@@ -292,12 +292,12 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
               </button>
             )}
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-            <X size={24} />
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5">
+            <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 grow overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-6 grow overflow-y-auto">
           {!analysis && !loading && (
             <div className="flex flex-col gap-4">
               <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-blue-200 text-sm">
@@ -305,11 +305,11 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                   <AlertTriangle size={16} />
                   Requiere Gemini API Key
                 </p>
-                <p>Para realizar un análisis con IA generativa, necesitas una API Key de Google Gemini. Tu llave se guardará localmente en tu navegador por lo que no se recomienda usar un dispositivo compartido.</p>
+                <p className="text-xs sm:text-sm">Para realizar un análisis con IA generativa, necesitas una API Key de Google Gemini. Tu llave se guardará localmente en tu navegador por lo que no se recomienda usar un dispositivo compartido.</p>
               </div>
 
               <div className="flex flex-col gap-4">
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="password"
                     placeholder="Ingresa tu Gemini API Key"
@@ -319,16 +319,17 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                       setModels([]); // Reset models when key changes
                       setSelectedModel('');
                     }}
-                    className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors"
+                    className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-4 py-2 focus:border-emerald-500 outline-none transition-colors text-sm"
                   />
                   <button
                     onClick={handleValidateKey}
                     disabled={!apiKey || isValidating}
-                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
                   >
                     {isValidating ? <RefreshCw className="animate-spin" size={16} /> : 'Validar'}
                   </button>
                 </div>
+
 
                 {models.length > 0 && (
                   <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
@@ -485,30 +486,30 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-3xl w-full p-6 shadow-2xl shadow-emerald-500/10 flex flex-col relative animate-in fade-in zoom-in-95 duration-200"
+        className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl shadow-emerald-500/10 flex flex-col relative animate-in fade-in zoom-in-95 duration-200"
       >
-        <div className="flex justify-between items-start mb-6">
-          <div>
+        <div className="flex justify-between items-start gap-4 mb-6">
+          <div className="min-w-0 flex-1">
             <div className="text-[10px] text-emerald-500 font-mono mb-1 uppercase tracking-wider">{portfolio.category}</div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <TrendingUp className="text-emerald-400" />
-              Histórico: {portfolio.name}
+            <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
+              <TrendingUp className="text-emerald-400 shrink-0" size={20} />
+              <span className="truncate">Histórico: {portfolio.name}</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-400 mt-1 truncate">
               Sigla: <span className="font-mono text-slate-300">{portfolio.id}</span> • Valor Fondo: <span className="text-slate-300 font-semibold">{portfolio.value} M</span>
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5"
+            className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 shrink-0"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
-        <div className="flex justify-between items-center gap-4 bg-slate-950/60 p-1.5 rounded-xl border border-white/5 mb-6">
-          <div className="flex gap-1">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-950/60 p-1.5 rounded-xl border border-white/5 mb-6">
+          <div className="flex gap-1 overflow-x-auto scrollbar-none momentum-scroll pb-1 sm:pb-0">
             {periodsList.map((item) => {
               const active = period === item.id;
               return (
@@ -517,7 +518,7 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
                   type="button"
                   onClick={() => setPeriod(item.id)}
                   className={cn(
-                    "px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-300 relative",
+                    "px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-300 relative",
                     active
                       ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/10 font-bold"
                       : "text-slate-400 hover:text-white hover:bg-white/5"
@@ -530,16 +531,16 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
           </div>
 
           {stats && !loading && (
-            <div className="text-right mr-2 hidden sm:block">
-              <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-wider">Variación Período</span>
-              <span className={cn("text-sm font-bold", stats.var >= 0 ? "text-emerald-400" : "text-red-400")}>
+            <div className="flex sm:flex-col justify-between sm:justify-center items-center sm:items-end px-2 py-1.5 sm:py-0 sm:px-0 sm:text-right border-t border-white/5 sm:border-t-0 w-full sm:w-auto mt-1 sm:mt-0">
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider sm:block">Variación Período</span>
+              <span className={cn("text-xs sm:text-sm font-bold sm:mt-0.5", stats.var >= 0 ? "text-emerald-400" : "text-red-400")}>
                 {stats.var >= 0 ? '+' : ''}{stats.var.toFixed(2)}%
               </span>
             </div>
           )}
         </div>
 
-        <div className="bg-slate-950/40 rounded-xl border border-white/5 p-4 h-72 flex items-center justify-center relative">
+        <div className="bg-slate-950/40 rounded-xl border border-white/5 p-4 h-60 sm:h-72 flex items-center justify-center relative">
           {loading ? (
             <div className="flex flex-col items-center justify-center space-y-3">
               <RefreshCw className="animate-spin text-emerald-500" size={36} />
@@ -622,12 +623,12 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
           )}
         </div>
 
-        <div className="flex justify-between items-center mt-6 text-[10px] text-slate-500">
-          <p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mt-4 text-[10px] text-slate-500">
+          <p className="leading-normal">
             * El gráfico muestra el crecimiento unitario indexado a base inicial 1000.
           </p>
           {stats && (
-            <p className="font-mono text-slate-400">
+            <p className="font-mono text-slate-400 whitespace-nowrap">
               Rango: {stats.label}
             </p>
           )}
@@ -641,28 +642,33 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
 const FilterTabs = ({ items, selected, onToggle, label }: { items: string[], selected: string[], onToggle: (item: string) => void, label?: string }) => (
   <div className="flex flex-col gap-2 mb-4">
     {label && <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{label}</span>}
-    <div className="flex gap-2 overflow-x-auto pb-2">
-      {items.map(item => {
-        const isActive = selected.includes(item);
-        return (
-          <button
-            key={item}
-            onClick={() => onToggle(item)}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border flex items-center gap-2",
-              isActive
-                ? "bg-emerald-500 text-black border-emerald-500"
-                : "bg-slate-900 text-slate-400 border-white/10 hover:border-white/20 hover:text-white"
-            )}
-          >
-            {isActive && <CheckCircle size={14} />}
-            {item}
-          </button>
-        );
-      })}
+    <div className="relative">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none momentum-scroll pr-10">
+        {items.map(item => {
+          const isActive = selected.includes(item);
+          return (
+            <button
+              key={item}
+              onClick={() => onToggle(item)}
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border flex items-center gap-2",
+                isActive
+                  ? "bg-emerald-500 text-black border-emerald-500"
+                  : "bg-slate-900 text-slate-400 border-white/10 hover:border-white/20 hover:text-white"
+              )}
+            >
+              {isActive && <CheckCircle size={14} />}
+              {item}
+            </button>
+          );
+        })}
+      </div>
+      {/* Right fade gradient to visually indicate horizontal scrolling on mobile */}
+      <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-slate-950 via-slate-950/80 to-transparent pointer-events-none z-10" />
     </div>
   </div>
 );
+
 
 export default function Home() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
@@ -762,23 +768,24 @@ export default function Home() {
     });
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-8 font-sans">
+    <main className="min-h-screen bg-slate-950 text-white p-4 sm:p-8 font-sans">
       <div className="max-w-7xl mx-auto">
-        <header className="flex justify-between items-center mb-12">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-12">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
               Skandia Intelligence
             </h1>
-            <p className="text-slate-400 mt-2">Monitor de Rentabilidades y Análisis en Tiempo Real</p>
+            <p className="text-xs sm:text-sm text-slate-400 mt-2">Monitor de Rentabilidades y Análisis en Tiempo Real</p>
           </div>
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg transition-colors border border-emerald-500/20"
+            className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg transition-colors border border-emerald-500/20 w-full sm:w-auto justify-center"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             Actualizar
           </button>
         </header>
+
 
         {/* Ranking Section */}
         {!loading && (
@@ -901,29 +908,34 @@ export default function Home() {
           />
 
           {/* Filters */}
-          <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value="All">Todos los Tipos</option>
-              <option value="RV">Renta Variable (RV)</option>
-              <option value="RF">Renta Fija (RF)</option>
-              <option value="IA">Inv. Alternativa (IA)</option>
-            </select>
+          <div className="relative">
+            <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-none momentum-scroll pr-10">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 min-w-[150px]"
+              >
+                <option value="All">Todos los Tipos</option>
+                <option value="RV">Renta Variable (RV)</option>
+                <option value="RF">Renta Fija (RF)</option>
+                <option value="IA">Inv. Alternativa (IA)</option>
+              </select>
 
-            <select
-              value={filterRisk}
-              onChange={(e) => setFilterRisk(e.target.value)}
-              className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value="All">Todos los Riesgos</option>
-              <option value="Conservador">Conservador</option>
-              <option value="Moderado">Moderado</option>
-              <option value="Agresivo">Agresivo</option>
-            </select>
+              <select
+                value={filterRisk}
+                onChange={(e) => setFilterRisk(e.target.value)}
+                className="bg-slate-900 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 min-w-[150px]"
+              >
+                <option value="All">Todos los Riesgos</option>
+                <option value="Conservador">Conservador</option>
+                <option value="Moderado">Moderado</option>
+                <option value="Agresivo">Agresivo</option>
+              </select>
+            </div>
+            {/* Right fade gradient to visually indicate horizontal scrolling on mobile */}
+            <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-slate-950 via-slate-950/80 to-transparent pointer-events-none z-10 sm:hidden" />
           </div>
+
 
           {/* Error Message */}
           {error && (

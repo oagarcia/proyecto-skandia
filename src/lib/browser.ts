@@ -10,7 +10,7 @@ export async function getBrowser(): Promise<Browser> {
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let options: any = {};
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDev = process.env.NODE_ENV === 'development' || process.platform === 'darwin';
     
     if (isDev) {
         // Local Mac environment
