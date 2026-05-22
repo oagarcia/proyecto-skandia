@@ -418,20 +418,55 @@ interface ChartDataPoint {
   Value: number;
 }
 
+const formatDateToYYYYMMDD = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatYYYYMMDDToDDMMYYYY = (dateStr: string) => {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  return `${day}-${month}-${year}`;
+};
+
 const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () => void }) => {
-  const [period, setPeriod] = useState<'P1' | 'P2' | 'P3' | 'P4'>('P4');
+  const [period, setPeriod] = useState<string>('P4');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chartData, setChartData] = useState<{ Date: string; formattedDate: string; Value: number }[]>([]);
   const [stats, setStats] = useState<{ var: number; label: string } | null>(null);
 
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6); // 6 months ago default
+    return formatDateToYYYYMMDD(d);
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    return formatDateToYYYYMMDD(new Date());
+  });
+  const [searchRange, setSearchRange] = useState<{ start: string; end: string } | null>(null);
+
   useEffect(() => {
     const fetchChartData = async () => {
+      if (period === 'custom' && !searchRange) {
+        setSearchRange({ start: startDate, end: endDate });
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
         const safeId = portfolio.id.replace(/[^A-Z0-9_]/g, '');
-        const res = await fetch(`/api/skandia/series?id=${safeId}&period=${period}`);
+        let apiPeriod = period;
+        if (period === 'custom' && searchRange) {
+          const startFormatted = formatYYYYMMDDToDDMMYYYY(searchRange.start);
+          const endFormatted = formatYYYYMMDDToDDMMYYYY(searchRange.end);
+          apiPeriod = `P0_${startFormatted}_${endFormatted}`;
+        }
+
+        const res = await fetch(`/api/skandia/series?id=${safeId}&period=${apiPeriod}`);
         const json = await res.json();
 
         if (json.success && json.data) {
@@ -448,6 +483,16 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
               formattedDate = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
             } else if (period === 'P2') {
               formattedDate = dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+            } else if (period === 'custom' && searchRange) {
+              const startD = new Date(searchRange.start);
+              const endD = new Date(searchRange.end);
+              const diffTime = Math.abs(endD.getTime() - startD.getTime());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              if (diffDays <= 60) {
+                formattedDate = dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+              } else {
+                formattedDate = dateObj.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
+              }
             } else {
               formattedDate = dateObj.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
             }
@@ -472,14 +517,15 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
     };
 
     fetchChartData();
-  }, [portfolio.id, period]);
+  }, [portfolio.id, period, searchRange]);
 
   const periodsList = [
     { id: 'P1', label: '1 Día' },
     { id: 'P2', label: '1 Mes' },
     { id: 'P3', label: '180 Días' },
-    { id: 'P4', label: '1 Año' }
-  ] as const;
+    { id: 'P4', label: '1 Año' },
+    { id: 'custom', label: 'Rango' }
+  ];
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -539,6 +585,46 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
             </div>
           )}
         </div>
+
+        {period === 'custom' && (
+          <div className="flex flex-col gap-2 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-6 animate-in fade-in slide-in-from-top-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <div className="flex-1 w-full">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Fecha Inicio</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs focus:border-emerald-500 outline-none transition-colors text-white [color-scheme:dark]"
+                />
+              </div>
+              <div className="flex-1 w-full">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Fecha Fin</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs focus:border-emerald-500 outline-none transition-colors text-white [color-scheme:dark]"
+                />
+              </div>
+              <div className="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                <button
+                  type="button"
+                  onClick={() => setSearchRange({ start: startDate, end: endDate })}
+                  disabled={!startDate || !endDate || loading || (startDate && endDate && new Date(startDate) > new Date(endDate))}
+                  className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold text-xs px-5 py-2.5 rounded-lg transition-all w-full text-center"
+                >
+                  Buscar
+                </button>
+              </div>
+            </div>
+            {startDate && endDate && new Date(startDate) > new Date(endDate) && (
+              <p className="text-[10px] text-red-400 animate-pulse">
+                La fecha de inicio debe ser anterior o igual a la fecha de fin.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="bg-slate-950/40 rounded-xl border border-white/5 p-4 h-60 sm:h-72 flex items-center justify-center relative">
           {loading ? (

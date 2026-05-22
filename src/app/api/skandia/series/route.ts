@@ -18,8 +18,9 @@ export async function GET(request: Request) {
     }
 
     const validPeriods = ['P1', 'P2', 'P3', 'P4'];
-    if (!validPeriods.includes(period)) {
-        return NextResponse.json({ success: false, error: 'Invalid period parameter. Use P1, P2, P3, or P4.' }, { status: 400 });
+    const customPeriodRegex = /^P0_\d{2}-\d{2}-\d{4}_\d{2}-\d{2}-\d{4}$/;
+    if (!validPeriods.includes(period) && !customPeriodRegex.test(period)) {
+        return NextResponse.json({ success: false, error: 'Invalid period parameter. Use P1, P2, P3, P4, or P0_DD-MM-YYYY_DD-MM-YYYY.' }, { status: 400 });
     }
 
     try {
