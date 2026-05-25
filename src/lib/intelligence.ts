@@ -8,8 +8,14 @@ export interface AnalysisResult {
 
 export function analyzePortfolio(portfolio: any): AnalysisResult {
     const { name, type, returns, risk } = portfolio;
-    const yearly = parseFloat(returns.yearly.replace('%', '').replace(',', '.'));
-    const monthly = parseFloat(returns.monthly.replace('%', '').replace(',', '.'));
+
+    // 🛡️ SENTINEL: Mitigate missing input validation
+    // Protect against NaN values if parsing fails by defaulting to 0
+    let yearly = parseFloat(returns.yearly.replace('%', '').replace(',', '.'));
+    let monthly = parseFloat(returns.monthly.replace('%', '').replace(',', '.'));
+
+    if (isNaN(yearly)) yearly = 0;
+    if (isNaN(monthly)) monthly = 0;
 
     let summary = '';
     const risks: string[] = [];
