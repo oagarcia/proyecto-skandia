@@ -30,7 +30,12 @@ function cleanup() {
         if (validTimestamps.length === 0) {
             ipRequests.delete(ip);
         } else {
+            // 🛡️ SENTINEL: The Map is ordered by insertion. Since we re-insert IPs on every request,
+            // the oldest IPs are at the start. Once we find an IP with recent requests,
+            // all subsequent IPs are guaranteed to be even more recent.
+            // We can break early to prevent O(N) iteration and mitigate CPU exhaustion DoS.
             ipRequests.set(ip, validTimestamps);
+            break;
         }
     }
     lastCleanup = now;
