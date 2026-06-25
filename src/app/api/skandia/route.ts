@@ -46,9 +46,11 @@ export async function GET(request: Request) {
         await page.setViewport({ width: 1280, height: 800 });
 
         console.log('Navigating to page...');
+        // 🛡️ SENTINEL: Enforce strict timeout for external network calls
+        // Prevents Denial of Service (DoS) via resource exhaustion and hanging connections
         await page.goto('https://portal.skandia.com.co/om.rentabilidades.pl/oldmutual', {
             waitUntil: 'networkidle2',
-            timeout: 60000
+            timeout: 30000
         });
         console.log('Page loaded');
 

@@ -51,7 +51,10 @@ export async function searchGoogleNews(query: string, browserInstance?: Browser)
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
-        await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
+
+        // 🛡️ SENTINEL: Enforce strict timeout for external network calls
+        // Prevents Denial of Service (DoS) via resource exhaustion and hanging connections
+        await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
         // Extract news items
         const newsItems = await page.evaluate(() => {

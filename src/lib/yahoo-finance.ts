@@ -74,8 +74,9 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
 
         await page.setViewport({ width: 1280, height: 800 });
 
-        // Timeout generoso para evitar fallos por red lenta
-        await page.goto(mainUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // 🛡️ SENTINEL: Enforce strict timeout for external network calls
+        // Prevents Denial of Service (DoS) via resource exhaustion and hanging connections
+        await page.goto(mainUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
         console.log(`[Yahoo Finance] Navigated to ${mainUrl}`);
 
         // Esperar selectores clave
