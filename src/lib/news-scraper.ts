@@ -51,7 +51,7 @@ export async function searchGoogleNews(query: string, browserInstance?: Browser)
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
         console.log(`---------------------------------------------------`);
-        await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
+        await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
         // Extract news items
         const newsItems = await page.evaluate(() => {
