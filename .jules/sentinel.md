@@ -14,3 +14,7 @@
 **Vulnerability:** Numerical inputs (`returns.yearly`, `returns.monthly`) parsed with `parseFloat` could evaluate to `NaN` when unparseable strings (like `"-"` or `""`) were passed, bypassing validation constraints and causing undefined behavior in the scoring logic.
 **Learning:** Even when inputs are validated structurally or by length, any parsed numerical values from string properties must be checked against `NaN` (using `isNaN()`) to prevent logic flaws, unintended conditionals execution, or crashes.
 **Prevention:** Always check the result of `parseFloat()` or `parseInt()` using `isNaN()` and implement safe defaults (like `0`) or proper error-handling routines before using them in business logic.
+## 2025-05-30 - Prevent Denial of Service (DoS) via resource exhaustion in headless browsers
+**Vulnerability:** The Puppeteer `page.goto` navigation in the Google News scraper lacked an explicit `timeout` configuration, relying on default behaviors which can lead to hanging processes if the upstream server is unresponsive.
+**Learning:** External network calls, particularly headless browser navigations, must always enforce explicit timeouts. Without them, hanging requests can tie up concurrency slots and consume memory, leading to resource exhaustion and application-wide Denial of Service.
+**Prevention:** Always explicitly define `timeout: 30000` (or an appropriate value) in the options object for `page.goto()` and similar network-bound functions.
