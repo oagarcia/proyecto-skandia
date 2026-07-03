@@ -18,3 +18,7 @@
 **Vulnerability:** The rate limiter blindly prioritized the `X-Real-IP` header over `X-Forwarded-For` when extracting the client IP address.
 **Learning:** While `X-Real-IP` is a common proxy header, it can be easily spoofed by attackers. Standard reverse proxies append the client IP to the end of `X-Forwarded-For`. Prioritizing `X-Real-IP` allows an attacker to send `X-Real-IP: fake-ip` to bypass IP-based rate limiting if the proxy doesn't overwrite it.
 **Prevention:** Always prioritize extracting the client IP from the end (rightmost) of the `X-Forwarded-For` list over easily spoofed singular headers like `X-Real-IP`.
+## 2025-05-30 - Prevent Denial of Service (DoS) via resource exhaustion in headless browsers
+**Vulnerability:** The Puppeteer `page.goto` navigation in the Google News scraper lacked an explicit `timeout` configuration, relying on default behaviors which can lead to hanging processes if the upstream server is unresponsive.
+**Learning:** External network calls, particularly headless browser navigations, must always enforce explicit timeouts. Without them, hanging requests can tie up concurrency slots and consume memory, leading to resource exhaustion and application-wide Denial of Service.
+**Prevention:** Always explicitly define `timeout: 30000` (or an appropriate value) in the options object for `page.goto()` and similar network-bound functions.

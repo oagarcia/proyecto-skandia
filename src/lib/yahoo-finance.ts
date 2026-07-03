@@ -125,7 +125,8 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
             const results = [];
             const storyItems = document.querySelectorAll('[data-testid="storyitem"]');
 
-            for (let item of Array.from(storyItems)) {
+            for (let i = 0; i < storyItems.length; i++) {
+                const item = storyItems[i];
                 const titleEl = item.querySelector('h3');
                 const linkEl = item.querySelector('a');
 
@@ -146,7 +147,8 @@ async function fetchYahooDataWithBrowser(browser: Browser, symbol: string): Prom
                 const newsSection = document.querySelector('[data-testid="recent-news"]');
                 if (newsSection) {
                     const links = newsSection.querySelectorAll('h3 a, a h3');
-                    for (let el of Array.from(links)) {
+                    for (let i = 0; i < links.length; i++) {
+                        const el = links[i];
                         const aTag = (el.tagName === 'A' ? el : el.closest('a'));
                         if (aTag && aTag.href && aTag.textContent) {
                             results.push({
@@ -226,15 +228,26 @@ async function scrapeArticleContent(browser: Browser, url: string): Promise<stri
         const summary = await page.evaluate(`(() => {
             const body = document.querySelector('.caas-body');
             if (body) {
-                const paragraphs = Array.from(body.querySelectorAll('p'));
-                return paragraphs
-                    .map(p => p.textContent ? p.textContent.trim() : "")
-                    .filter(t => t.length > 50)
-                    .slice(0, 5)
-                    .join('\\n\\n');
+                const paragraphs = body.querySelectorAll('p');
+                const result = [];
+                for (let i = 0; i < paragraphs.length; i++) {
+                    const p = paragraphs[i];
+                    const text = p.textContent ? p.textContent.trim() : "";
+                    if (text.length > 50) {
+                        result.push(text);
+                        if (result.length >= 5) break;
+                    }
+                }
+                return result.join('\\\\n\\\\n');
             }
-            const paragraphs = Array.from(document.querySelectorAll('article p, .body p'));
-            return paragraphs.map(p => p.textContent ? p.textContent.trim() : "").slice(0, 4).join('\\n\\n');
+            const paragraphs = document.querySelectorAll('article p, .body p');
+            const result = [];
+            for (let i = 0; i < Math.min(paragraphs.length, 4); i++) {
+                const p = paragraphs[i];
+                const text = p.textContent ? p.textContent.trim() : "";
+                result.push(text);
+            }
+            return result.join('\\\\n\\\\n');
         })()`);
 
         await page.close();
