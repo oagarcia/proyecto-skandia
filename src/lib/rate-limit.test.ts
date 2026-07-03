@@ -74,10 +74,10 @@ describe('getClientIp', () => {
     const makeRequest = (headers: Record<string, string>) =>
         new Request('http://localhost/', { headers });
 
-    it('should prefer x-real-ip over x-forwarded-for', () => {
+    it('should prefer x-forwarded-for over x-real-ip to prevent spoofing', () => {
         const req = makeRequest({
-            'x-real-ip': '10.0.0.1',
-            'x-forwarded-for': '1.2.3.4, 5.6.7.8',
+            'x-real-ip': 'spoofed-real-ip',
+            'x-forwarded-for': '1.2.3.4, 10.0.0.1',
         });
         expect(getClientIp(req)).toBe('10.0.0.1');
     });

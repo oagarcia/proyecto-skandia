@@ -14,6 +14,10 @@
 **Vulnerability:** Numerical inputs (`returns.yearly`, `returns.monthly`) parsed with `parseFloat` could evaluate to `NaN` when unparseable strings (like `"-"` or `""`) were passed, bypassing validation constraints and causing undefined behavior in the scoring logic.
 **Learning:** Even when inputs are validated structurally or by length, any parsed numerical values from string properties must be checked against `NaN` (using `isNaN()`) to prevent logic flaws, unintended conditionals execution, or crashes.
 **Prevention:** Always check the result of `parseFloat()` or `parseInt()` using `isNaN()` and implement safe defaults (like `0`) or proper error-handling routines before using them in business logic.
+## 2025-06-01 - Prevent IP Spoofing bypassing rate limits via X-Real-IP
+**Vulnerability:** The rate limiter blindly prioritized the `X-Real-IP` header over `X-Forwarded-For` when extracting the client IP address.
+**Learning:** While `X-Real-IP` is a common proxy header, it can be easily spoofed by attackers. Standard reverse proxies append the client IP to the end of `X-Forwarded-For`. Prioritizing `X-Real-IP` allows an attacker to send `X-Real-IP: fake-ip` to bypass IP-based rate limiting if the proxy doesn't overwrite it.
+**Prevention:** Always prioritize extracting the client IP from the end (rightmost) of the `X-Forwarded-For` list over easily spoofed singular headers like `X-Real-IP`.
 ## 2025-05-30 - Prevent Denial of Service (DoS) via resource exhaustion in headless browsers
 **Vulnerability:** The Puppeteer `page.goto` navigation in the Google News scraper lacked an explicit `timeout` configuration, relying on default behaviors which can lead to hanging processes if the upstream server is unresponsive.
 **Learning:** External network calls, particularly headless browser navigations, must always enforce explicit timeouts. Without them, hanging requests can tie up concurrency slots and consume memory, leading to resource exhaustion and application-wide Denial of Service.

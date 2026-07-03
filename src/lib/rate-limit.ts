@@ -45,15 +45,15 @@ function cleanup() {
  */
 /**
  * Securely extracts the client IP address from a request object.
- * Prefers x-real-ip to mitigate IP spoofing bypass via x-forwarded-for.
- * If x-real-ip is absent, takes the last IP in the X-Forwarded-For list.
- * Proxies append to the end, so the rightmost IP is the most trustworthy.
- * Taking the first IP allows attackers to spoof their IP by sending `X-Forwarded-For: fake-ip`.
+ * 🛡️ SENTINEL: Prefers X-Forwarded-For (last element) over X-Real-IP to prevent IP spoofing.
+ * Proxies typically append to X-Forwarded-For, making the last IP the most trustworthy.
+ * If X-Real-IP is preferred, an attacker can simply send X-Real-IP to bypass rate limits
+ * if the proxy does not overwrite it.
  */
 export function getClientIp(request: Request): string {
     const realIp = request.headers.get('x-real-ip');
     const forwardedFor = request.headers.get('x-forwarded-for');
-    return realIp || (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : 'unknown');
+    return (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : (realIp || 'unknown'));
 }
 
 export function checkRateLimit(ip: string, limit: number = 5, windowMs: number = 60 * 1000): boolean {
