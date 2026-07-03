@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, RefreshCw, X, BrainCircuit, AlertTriangle, CheckCircle, FileText, Activity } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -107,14 +107,14 @@ const ReturnItem = ({ label, value }: { label: string, value: string }) => {
   );
 };
 
-const PortfolioCard = ({ 
-  portfolio, 
-  onOpenChart, 
-  onOpenAnalysis 
-}: { 
-  portfolio: Portfolio; 
-  onOpenChart: () => void; 
-  onOpenAnalysis: () => void; 
+const PortfolioCard = ({
+  portfolio,
+  onOpenChart,
+  onOpenAnalysis
+}: {
+  portfolio: Portfolio;
+  onOpenChart: () => void;
+  onOpenAnalysis: () => void;
 }) => {
 
   return (
@@ -189,7 +189,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
 
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
@@ -206,7 +206,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
     }, 400); // fallback in case transitionend doesn't fire
 
     dialog.close();
-  };
+  }, [onClose]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -233,7 +233,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
         document.documentElement.style.overflow = originalHtmlOverflow;
       };
     }
-  }, []);
+  }, [handleClose]);
 
   const handleDialogClick = (event: React.MouseEvent<HTMLDialogElement>) => {
     const dialog = dialogRef.current;
@@ -477,11 +477,6 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
   );
 };
 
-interface ChartDataPoint {
-  Date: string;
-  Value: number;
-}
-
 const formatDateToYYYYMMDD = (d: Date) => {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -514,7 +509,7 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
 
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
@@ -531,7 +526,7 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
     }, 400); // fallback in case transitionend doesn't fire
 
     dialog.close();
-  };
+  }, [onClose]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -558,7 +553,7 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
         document.documentElement.style.overflow = originalHtmlOverflow;
       };
     }
-  }, []);
+  }, [handleClose]);
 
   const handleDialogClick = (event: React.MouseEvent<HTMLDialogElement>) => {
     const dialog = dialogRef.current;
@@ -581,7 +576,6 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
   useEffect(() => {
     const fetchChartData = async () => {
       if (period === 'custom' && !searchRange) {
-        setSearchRange({ start: startDate, end: endDate });
         return;
       }
 
@@ -606,7 +600,7 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
           });
 
           const rawSeries = json.data.series || [];
-          const formattedSeries = rawSeries.map((item: any) => {
+          const formattedSeries = rawSeries.map((item: { Date: string; Value: string | number }) => {
             const dateObj = new Date(item.Date);
             let formattedDate = '';
             if (period === 'P1') {
@@ -627,10 +621,12 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
               formattedDate = dateObj.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
             }
 
+            const numericValue = typeof item.Value === 'number' ? item.Value : parseFloat(item.Value) || 0;
+
             return {
               Date: item.Date,
               formattedDate,
-              Value: parseFloat(item.Value) || 0
+              Value: numericValue
             };
           });
 
@@ -683,171 +679,176 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
         </button>
       </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-950/60 p-1.5 rounded-xl border border-white/5 mb-6">
-          <div className="flex gap-1 overflow-x-auto scrollbar-none momentum-scroll pb-1 sm:pb-0">
-            {periodsList.map((item) => {
-              const active = period === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setPeriod(item.id)}
-                  className={cn(
-                    "px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-300 relative",
-                    active
-                      ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/10 font-bold"
-                      : "text-slate-400 hover:text-white hover:bg-white/5"
-                  )}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {stats && !loading && (
-            <div className="flex sm:flex-col justify-between sm:justify-center items-center sm:items-end px-2 py-1.5 sm:py-0 sm:px-0 sm:text-right border-t border-white/5 sm:border-t-0 w-full sm:w-auto mt-1 sm:mt-0">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider sm:block">Variación Período</span>
-              <span className={cn("text-xs sm:text-sm font-bold sm:mt-0.5", stats.var >= 0 ? "text-emerald-400" : "text-red-400")}>
-                {stats.var >= 0 ? '+' : ''}{stats.var.toFixed(2)}%
-              </span>
-            </div>
-          )}
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-950/60 p-1.5 rounded-xl border border-white/5 mb-6">
+        <div className="flex gap-1 overflow-x-auto scrollbar-none momentum-scroll pb-1 sm:pb-0">
+          {periodsList.map((item) => {
+            const active = period === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setPeriod(item.id);
+                  if (item.id === 'custom' && !searchRange) {
+                    setSearchRange({ start: startDate, end: endDate });
+                  }
+                }}
+                className={cn(
+                  "px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-300 relative",
+                  active
+                    ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/10 font-bold"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
 
-        {period === 'custom' && (
-          <div className="flex flex-col gap-2 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-6 animate-in fade-in slide-in-from-top-2">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-              <div className="flex-1 w-full">
-                <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Fecha Inicio</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs focus:border-emerald-500 outline-none transition-colors text-white [color-scheme:dark]"
-                />
-              </div>
-              <div className="flex-1 w-full">
-                <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Fecha Fin</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs focus:border-emerald-500 outline-none transition-colors text-white [color-scheme:dark]"
-                />
-              </div>
-              <div className="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                <button
-                  type="button"
-                  onClick={() => setSearchRange({ start: startDate, end: endDate })}
-                  disabled={!startDate || !endDate || loading || !!(startDate && endDate && new Date(startDate) > new Date(endDate))}
-                  className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold text-xs px-5 py-2.5 rounded-lg transition-all w-full text-center"
-                >
-                  Buscar
-                </button>
-              </div>
-            </div>
-            {startDate && endDate && new Date(startDate) > new Date(endDate) && (
-              <p className="text-[10px] text-red-400 animate-pulse">
-                La fecha de inicio debe ser anterior o igual a la fecha de fin.
-              </p>
-            )}
+        {stats && !loading && (
+          <div className="flex sm:flex-col justify-between sm:justify-center items-center sm:items-end px-2 py-1.5 sm:py-0 sm:px-0 sm:text-right border-t border-white/5 sm:border-t-0 w-full sm:w-auto mt-1 sm:mt-0">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider sm:block">Variación Período</span>
+            <span className={cn("text-xs sm:text-sm font-bold sm:mt-0.5", stats.var >= 0 ? "text-emerald-400" : "text-red-400")}>
+              {stats.var >= 0 ? '+' : ''}{stats.var.toFixed(2)}%
+            </span>
           </div>
         )}
+      </div>
 
-        <div className="bg-slate-950/40 rounded-xl border border-white/5 p-4 h-60 sm:h-72 flex items-center justify-center relative">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <RefreshCw className="animate-spin text-emerald-500" size={36} />
-              <p className="text-xs text-slate-500">Cargando histórico...</p>
+      {period === 'custom' && (
+        <div className="flex flex-col gap-2 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-6 animate-in fade-in slide-in-from-top-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+            <div className="flex-1 w-full">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Fecha Inicio</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs focus:border-emerald-500 outline-none transition-colors text-white [color-scheme:dark]"
+              />
             </div>
-          ) : error ? (
-            <div className="text-center p-4">
-              <AlertTriangle className="text-red-400 mx-auto mb-2" size={32} />
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="flex-1 w-full">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Fecha Fin</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs focus:border-emerald-500 outline-none transition-colors text-white [color-scheme:dark]"
+              />
+            </div>
+            <div className="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
               <button
                 type="button"
-                onClick={() => setPeriod(period)}
-                className="mt-3 text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-white/10 transition-colors"
+                onClick={() => setSearchRange({ start: startDate, end: endDate })}
+                disabled={!startDate || !endDate || loading || !!(startDate && endDate && new Date(startDate) > new Date(endDate))}
+                className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold text-xs px-5 py-2.5 rounded-lg transition-all w-full text-center"
               >
-                Reintentar
+                Buscar
               </button>
             </div>
-          ) : chartData.length === 0 ? (
-            <p className="text-xs text-slate-500">No hay datos históricos disponibles en este período.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                <XAxis
-                  dataKey="formattedDate"
-                  stroke="#ffffff40"
-                  fontSize={10}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#ffffff40"
-                  fontSize={10}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={['auto', 'auto']}
-                  tickFormatter={(val) => Math.round(val).toLocaleString('es-CO')}
-                />
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const dataPoint = payload[0].payload;
-                      const dateObj = new Date(dataPoint.Date);
-                      const formattedFullDate = dateObj.toLocaleDateString('es-CO', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      });
-
-                      return (
-                        <div className="bg-slate-900/95 border border-white/10 p-3 rounded-lg shadow-xl backdrop-blur-md">
-                          <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider mb-1">
-                            {formattedFullDate}
-                          </p>
-                          <p className="text-sm font-bold text-white">
-                            Índice: <span className="text-emerald-400 font-mono font-black">{payload[0].value?.toLocaleString('es-CO')}</span>
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="Value"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorValue)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mt-4 text-[10px] text-slate-500">
-          <p className="leading-normal">
-            * El gráfico muestra el crecimiento unitario indexado a base inicial 1000.
-          </p>
-          {stats && (
-            <p className="font-mono text-slate-400 whitespace-nowrap">
-              Rango: {stats.label}
+          </div>
+          {startDate && endDate && new Date(startDate) > new Date(endDate) && (
+            <p className="text-[10px] text-red-400 animate-pulse">
+              La fecha de inicio debe ser anterior o igual a la fecha de fin.
             </p>
           )}
         </div>
+      )}
+
+      <div className="bg-slate-950/40 rounded-xl border border-white/5 p-4 h-60 sm:h-72 flex items-center justify-center relative">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <RefreshCw className="animate-spin text-emerald-500" size={36} />
+            <p className="text-xs text-slate-500">Cargando histórico...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center p-4">
+            <AlertTriangle className="text-red-400 mx-auto mb-2" size={32} />
+            <p className="text-sm text-red-400">{error}</p>
+            <button
+              type="button"
+              onClick={() => setPeriod(period)}
+              className="mt-3 text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-white/10 transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : chartData.length === 0 ? (
+          <p className="text-xs text-slate-500">No hay datos históricos disponibles en este período.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+              <XAxis
+                dataKey="formattedDate"
+                stroke="#ffffff40"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="#ffffff40"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                domain={['auto', 'auto']}
+                tickFormatter={(val) => Math.round(val).toLocaleString('es-CO')}
+              />
+              <RechartsTooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const dataPoint = payload[0].payload;
+                    const dateObj = new Date(dataPoint.Date);
+                    const formattedFullDate = dateObj.toLocaleDateString('es-CO', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    });
+
+                    return (
+                      <div className="bg-slate-900/95 border border-white/10 p-3 rounded-lg shadow-xl backdrop-blur-md">
+                        <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider mb-1">
+                          {formattedFullDate}
+                        </p>
+                        <p className="text-sm font-bold text-white">
+                          Índice: <span className="text-emerald-400 font-mono font-black">{payload[0].value?.toLocaleString('es-CO')}</span>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="Value"
+                stroke="#10b981"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorValue)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mt-4 text-[10px] text-slate-500">
+        <p className="leading-normal">
+          * El gráfico muestra el crecimiento unitario indexado a base inicial 1000.
+        </p>
+        {stats && (
+          <p className="font-mono text-slate-400 whitespace-nowrap">
+            Rango: {stats.label}
+          </p>
+        )}
+      </div>
     </dialog>
   );
 };
