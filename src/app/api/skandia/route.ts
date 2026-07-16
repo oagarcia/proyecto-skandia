@@ -66,9 +66,9 @@ export async function GET(request: Request) {
 
         // 2. Input dates and Calculate
         await page.evaluate((f, t) => {
-            // @ts-ignore
+            // @ts-expect-error type injected by evaluate
             document.getElementById('datepickerFrom').value = f;
-            // @ts-ignore
+            // @ts-expect-error type injected by evaluate
             document.getElementById('datepickerTo').value = t;
         }, from, to);
 
@@ -92,7 +92,6 @@ export async function GET(request: Request) {
         const portfolios = await page.evaluate(() => {
             const win = window as any;
             if (typeof win.data === 'undefined') return [];
-            const results: any[] = [];
             const cat = win.data['0']; // Only 'Skandia Pensiones y Cesantías S.A.' is displayed in the tables
             if (!cat || !cat.Products) return [];
 
@@ -104,32 +103,29 @@ export async function GET(request: Request) {
                 return str + '%';
             };
 
-            cat.Products.forEach((p: any) => {
-                if (!p.Portfolios) return;
-                p.Portfolios.forEach((port: any) => {
-                    let risk = 'Unknown';
-                    if (port.ProfileRisk === '1') risk = 'Conservador';
-                    if (port.ProfileRisk === '2') risk = 'Moderado';
-                    if (port.ProfileRisk === '3') risk = 'Agresivo';
+            const riskMap: Record<string, string> = {
+                '1': 'Conservador',
+                '2': 'Moderado',
+                '3': 'Agresivo'
+            };
 
-                    results.push({
-                        id: port.Id, // Real portfolio sigla (e.g. OMACTE)
-                        category: p.ProductName, // e.g. "Portafolios Abiertos"
-                        name: port.LongName || '',
-                        type: port.Clasification || 'Unknown',
-                        value: port.FundValueForExcel || '0',
-                        risk,
-                        returns: {
-                            daily: formatReturn(port.UnitValueDay1),
-                            monthly: formatReturn(port.UnitValueDay30),
-                            sixMonths: formatReturn(port.UnitValueDay180),
-                            yearly: formatReturn(port.UnitValueDay365)
-                        }
-                    });
-                });
+            return cat.Products.flatMap((p: any) => {
+                if (!p.Portfolios) return [];
+                return p.Portfolios.map((port: any) => ({
+                    id: port.Id, // Real portfolio sigla (e.g. OMACTE)
+                    category: p.ProductName, // e.g. "Portafolios Abiertos"
+                    name: port.LongName || '',
+                    type: port.Clasification || 'Unknown',
+                    value: port.FundValueForExcel || '0',
+                    risk: riskMap[port.ProfileRisk] || 'Unknown',
+                    returns: {
+                        daily: formatReturn(port.UnitValueDay1),
+                        monthly: formatReturn(port.UnitValueDay30),
+                        sixMonths: formatReturn(port.UnitValueDay180),
+                        yearly: formatReturn(port.UnitValueDay365)
+                    }
+                }));
             });
-
-            return results;
         });
 
         await browser.close();
