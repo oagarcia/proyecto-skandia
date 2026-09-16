@@ -457,10 +457,10 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
                 strong: ({ ...props }) => <strong className="text-white font-semibold" {...props} />,
                 a: ({ ...props }) => (
                   <a
+                    {...props}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-full bg-emerald-900/30 text-emerald-300 text-xs font-medium hover:bg-emerald-800 transition-colors no-underline border border-emerald-800/50"
-                    {...props}
                     href={sanitizeUrl(props.href)}
                   >
                     {props.children}

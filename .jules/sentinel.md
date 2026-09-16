@@ -22,3 +22,8 @@
 **Vulnerability:** The Puppeteer `page.goto` navigation in the Google News scraper lacked an explicit `timeout` configuration, relying on default behaviors which can lead to hanging processes if the upstream server is unresponsive.
 **Learning:** External network calls, particularly headless browser navigations, must always enforce explicit timeouts. Without them, hanging requests can tie up concurrency slots and consume memory, leading to resource exhaustion and application-wide Denial of Service.
 **Prevention:** Always explicitly define `timeout: 30000` (or an appropriate value) in the options object for `page.goto()` and similar network-bound functions.
+
+## 2026-09-16 - Prevent Reverse Tabnabbing via React props override
+**Vulnerability:** In `src/app/page.tsx`, the custom anchor tag renderer for `ReactMarkdown` applied user-provided props (using `{...props}`) *after* the explicit `target="_blank"` and `rel="noopener noreferrer"` security attributes. This allows a malicious markdown input to potentially override these secure defaults, bypassing the Reverse Tabnabbing protection.
+**Learning:** When implementing custom renderers in React that spread user-controlled properties (like `{...props}`), those properties must always be spread *before* explicitly declaring any security-critical attributes. Otherwise, the last specified attribute wins, allowing the secure defaults to be overridden.
+**Prevention:** Always place `{...props}` at the beginning of the JSX tag's attribute list, followed by the explicit safe overrides such as `target="_blank"`, `rel="noopener noreferrer"`, and `href={sanitizeUrl(props.href)}`.
