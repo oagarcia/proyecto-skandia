@@ -37,6 +37,18 @@ Extrae los nombres de los principales holdings (inversiones) desde el PDF de la 
 - No registra el contenido completo del PDF en logs (solo los holdings extraídos)
 - Los errores se capturan y retornan como array vacío, no se propagan al caller
 
+### `hasHoldingsSection(text: string): boolean`
+
+**Descripción:** Función pura que indica si el texto contiene `HOLDINGS_SECTION_MARKER` ("Principales inversiones del portafolio").
+
+### `pdfHasHoldingsSection(pdfBuffer: Buffer): Promise<boolean>`
+
+**Descripción:** Parsea el PDF y retorna si contiene la sección de holdings. Usado por `pdf-scraper` para decidir entre el período `'0'` y `'1'`.
+
+**Postcondiciones:**
+- MUST retornar `true` si el texto del PDF contiene `HOLDINGS_SECTION_MARKER`
+- MUST retornar `false` (sin lanzar excepción) si la sección no existe o si ocurre un error de parseo
+
 ---
 
 ## Test Coverage
@@ -48,6 +60,8 @@ Extrae los nombres de los principales holdings (inversiones) desde el PDF de la 
 | MUST limitar a 10 holdings máximo | `src/lib/pdf-parser.test.ts` | `"should return at most 10 holdings"` | COVERED |
 | SHOULD extraer holdings de líneas con % | `src/lib/pdf-parser.test.ts` | `"should extract holdings from lines ending in percentage"` | COVERED |
 | SHOULD limpiar tipo de inversión del nombre | `src/lib/pdf-parser.test.ts` | `"should strip type keywords from holding names"` | COVERED |
+| hasHoldingsSection detecta el marcador | `src/lib/pdf-parser.test.ts` | `"should return true when the section marker is present"` | COVERED |
+| pdfHasHoldingsSection retorna false en error | `src/lib/pdf-parser.test.ts` | `"should return false on parse error without throwing"` | COVERED |
 
 ---
 

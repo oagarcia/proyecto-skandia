@@ -12,6 +12,7 @@ Descarga la ficha técnica en PDF de un portafolio Skandia específico. Navega c
 ## Dependencias
 
 - `./browser` — factory de Puppeteer Browser
+- `./pdf-parser` — `pdfHasHoldingsSection` para validar el PDF del período más reciente
 - `puppeteer-core` — tipos de Browser
 
 ---
@@ -36,6 +37,11 @@ Descarga la ficha técnica en PDF de un portafolio Skandia específico. Navega c
 - MUST navegar a `https://portal.skandia.com.co/om.rentabilidades.pl/oldmutual`
 - MUST retornar `{ pdfBase64: null, pdfUrl: null }` si el portafolio no se encuentra en la página
 - MUST retornar `{ pdfBase64: null, pdfUrl: null }` si faltan los parámetros requeridos (origin, idPortfolio, idProduct)
+
+*Selección de período:*
+- MUST intentar primero el período `'0'` (mes más reciente)
+- MUST usar el PDF del período `'0'` solo si su texto contiene "Principales inversiones del portafolio"
+- MUST caer al período `'1'` (mes anterior) si el PDF del período `'0'` no contiene esa sección, o si su descarga falla (status no OK, timeout, respuesta que no es PDF)
 
 *Descarga:*
 - MUST construir la URL del PDF usando `URLSearchParams` (no concatenación de strings)
@@ -72,5 +78,6 @@ Descarga la ficha técnica en PDF de un portafolio Skandia específico. Navega c
 
 ## Gaps y decisiones pendientes
 
-<!-- GAP: El período de la ficha técnica está hardcodeado como '1'. Si Skandia cambia los valores de período, la URL del PDF fallará silenciosamente. -->
+<!-- GAP: Los valores de período ('0' = mes actual, '1' = mes anterior) están hardcodeados. Si Skandia cambia su semántica, la selección fallará silenciosamente. -->
+<!-- GAP: Cuando el período '0' no es usable se hacen dos descargas por análisis. -->
 <!-- GAP: `page.waitForSelector('div[id^="numberOfRow"]', { timeout: 10000 })` puede fallar si el portal Skandia tarda más de 10 segundos. No hay retry logic. -->
