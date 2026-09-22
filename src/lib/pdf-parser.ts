@@ -6,8 +6,17 @@ const pdf = require('pdf-parse/lib/pdf-parse.js');
  */
 const TYPE_KEYWORDS_REGEX = /\s*(?:Rv\. Internacional|Derivados|Liquidez|Fondo Internacional|Financiero Local).*/;
 
+export const HOLDINGS_SECTION_MARKER = "Principales inversiones del portafolio";
+
+/**
+ * Pure check: whether the PDF text contains the holdings section.
+ */
+export function hasHoldingsSection(text: string): boolean {
+    return text.includes(HOLDINGS_SECTION_MARKER);
+}
+
 export function extractHoldingsFromText(text: string): string[] {
-    const startMarker = "Principales inversiones del portafolio";
+    const startMarker = HOLDINGS_SECTION_MARKER;
     const startIndex = text.indexOf(startMarker);
 
     if (startIndex === -1) {
@@ -60,5 +69,15 @@ export async function extractHoldingsFromPdf(pdfBuffer: Buffer): Promise<string[
     } catch (error) {
         console.error('[PDF Parser] Error parsing PDF:', error);
         return [];
+    }
+}
+
+export async function pdfHasHoldingsSection(pdfBuffer: Buffer): Promise<boolean> {
+    try {
+        const data = await pdf(pdfBuffer);
+        return hasHoldingsSection(data.text);
+    } catch (error) {
+        console.error('[PDF Parser] Error parsing PDF:', error);
+        return false;
     }
 }

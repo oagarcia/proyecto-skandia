@@ -1,6 +1,6 @@
 // @spec src/specs/lib/pdf-parser.spec.md
 import { describe, it, expect } from 'vitest';
-import { extractHoldingsFromText } from './pdf-parser';
+import { extractHoldingsFromText, hasHoldingsSection, pdfHasHoldingsSection } from './pdf-parser';
 
 // Tests de la lógica pura de parseo de texto (sin I/O de PDF)
 // extractHoldingsFromPdf solo añade la capa de I/O sobre esta función
@@ -69,5 +69,21 @@ describe('extractHoldingsFromText', () => {
         const result = extractHoldingsFromText(text);
         expect(result.length).toBe(1);
         expect(result[0]).toContain('Jpmorgan');
+    });
+});
+
+describe('hasHoldingsSection', () => {
+    it('should return true when the section marker is present', () => {
+        expect(hasHoldingsSection(makePdfText(['Some Fund Rv. Internacional 10.00%']))).toBe(true);
+    });
+
+    it('should return false when the section marker is missing', () => {
+        expect(hasHoldingsSection('Ficha Técnica del Portafolio\nSin inversiones publicadas')).toBe(false);
+    });
+});
+
+describe('pdfHasHoldingsSection', () => {
+    it('should return false on parse error without throwing', async () => {
+        await expect(pdfHasHoldingsSection(Buffer.from('not a pdf'))).resolves.toBe(false);
     });
 });
