@@ -100,9 +100,9 @@ const ReturnValue = ({ value, className }: { value: string, className?: string }
 
 const ReturnItem = ({ label, value }: { label: string, value: string }) => {
   return (
-    <div className="bg-slate-800/50 p-2 rounded-lg">
-      <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">{label}</p>
-      <ReturnValue value={value} className="text-lg font-bold" />
+    <div>
+      <p className="text-[10px] text-slate-500">{label}</p>
+      <ReturnValue value={value} className="text-sm font-bold" />
     </div>
   );
 };
@@ -110,48 +110,72 @@ const ReturnItem = ({ label, value }: { label: string, value: string }) => {
 const PortfolioCard = ({
   portfolio,
   onOpenChart,
-  onOpenAnalysis
+  onOpenAnalysis,
+  variant = 'default',
+  rank
 }: {
   portfolio: Portfolio;
   onOpenChart: () => void;
   onOpenAnalysis: () => void;
+  variant?: 'default' | 'compact';
+  rank?: number;
 }) => {
+  const compact = variant === 'compact';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={compact ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-xl p-5 hover:border-emerald-500/50 transition-all duration-300 group h-full flex flex-col"
+      className={cn(
+        "border border-white/10 rounded-xl hover:border-emerald-500/50 transition-all duration-300 group flex flex-col",
+        compact
+          ? "w-64 bg-slate-900 p-4 snap-start justify-between"
+          : "bg-slate-900/50 backdrop-blur-md p-5 h-full"
+      )}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div>
+      {compact ? (
+        <>
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-emerald-500 font-bold text-lg">#{rank}</span>
+            <RiskBadge risk={portfolio.risk} />
+          </div>
           <div className="text-[10px] text-emerald-500/80 font-mono mb-1 uppercase tracking-wider">{portfolio.category}</div>
-          <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 min-h-[3rem]">
-            {portfolio.name}
-          </h3>
-          <p className="text-slate-400 text-xs mt-1">{portfolio.type} • {portfolio.value} M</p>
+          <h3 title={portfolio.name} className="font-semibold truncate mb-2 group-hover:text-emerald-400 text-sm text-white">{portfolio.name}</h3>
+        </>
+      ) : (
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <div className="text-[10px] text-emerald-500/80 font-mono mb-1 uppercase tracking-wider">{portfolio.category}</div>
+            <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 min-h-12">
+              {portfolio.name}
+            </h3>
+            <p className="text-slate-400 text-xs mt-1">{portfolio.type} • {portfolio.value} M</p>
+          </div>
+          <RiskBadge risk={portfolio.risk} />
         </div>
-        <RiskBadge risk={portfolio.risk} />
-      </div>
+      )}
 
-      <div className="grid grid-cols-2 gap-2 mb-4 mt-auto">
-        <ReturnItem label="1 Día" value={portfolio.returns.daily} />
+      <div className="grid grid-cols-2 gap-2">
+        <ReturnItem label="Día" value={portfolio.returns.daily} />
         <ReturnItem label="Mes" value={portfolio.returns.monthly} />
         <ReturnItem label="6 Meses" value={portfolio.returns.sixMonths} />
-        <ReturnItem label="Año (YTD)" value={portfolio.returns.yearly} />
+        <ReturnItem label="Año" value={portfolio.returns.yearly} />
       </div>
 
-      <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
+      <div className={cn("flex gap-2 border-t border-white/5", compact ? "pt-3 mt-auto" : "mt-4 pt-4")}>
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onOpenChart();
           }}
-          className="flex-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black py-2 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-sm"
+          className={cn(
+            "flex-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black rounded-lg transition-all duration-300 flex items-center justify-center border border-emerald-500/20",
+            compact ? "py-1.5 text-[10px] font-bold gap-1" : "py-2 text-xs font-semibold gap-1.5 shadow-sm"
+          )}
         >
-          <TrendingUp size={14} />
-          Ver Gráfico
+          <TrendingUp size={compact ? 12 : 14} />
+          Gráfico
         </button>
         <button
           type="button"
@@ -159,9 +183,12 @@ const PortfolioCard = ({
             e.stopPropagation();
             onOpenAnalysis();
           }}
-          className="flex-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-2 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 border border-purple-500/20 shadow-sm"
+          className={cn(
+            "flex-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white rounded-lg transition-all duration-300 flex items-center justify-center border border-purple-500/20",
+            compact ? "py-1.5 text-[10px] font-bold gap-1" : "py-2 text-xs font-semibold gap-1.5 shadow-sm"
+          )}
         >
-          <BrainCircuit size={14} />
+          <BrainCircuit size={compact ? 12 : 14} />
           Análisis IA
         </button>
       </div>
@@ -1046,59 +1073,14 @@ export default function Home() {
               <div className="overflow-x-auto pb-4 momentum-scroll snap-x snap-mandatory">
                 <div className="flex gap-4 min-w-max px-1">
                   {rankedPortfolios.map((p, index) => (
-                    <div key={p.id} className="w-64 bg-slate-900 border border-white/10 rounded-xl p-4 hover:border-emerald-500/50 transition-all duration-300 group snap-start flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-emerald-500 font-bold text-lg">#{index + 1}</span>
-                          <RiskBadge risk={p.risk} />
-                        </div>
-                        <h3 title={p.name} className="font-semibold truncate mb-2 group-hover:text-emerald-400 text-sm text-white">{p.name}</h3>
-
-                        <div className="grid grid-cols-2 gap-2 mb-4">
-                          <div>
-                            <p className="text-[10px] text-slate-500">Año</p>
-                            <ReturnValue value={p.returns.yearly} className="text-sm font-bold" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500">Mes</p>
-                            <ReturnValue value={p.returns.monthly} className="text-sm font-bold" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500">6M</p>
-                            <ReturnValue value={p.returns.sixMonths} className="text-sm font-bold" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500">Día</p>
-                            <ReturnValue value={p.returns.daily} className="text-sm font-bold" />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 pt-3 border-t border-white/5 mt-auto">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedChartPortfolio(p);
-                          }}
-                          className="flex-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300 flex items-center justify-center gap-1 border border-emerald-500/20"
-                        >
-                          <TrendingUp size={12} />
-                          Gráfico
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedPortfolio(p);
-                          }}
-                          className="flex-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300 flex items-center justify-center gap-1 border border-purple-500/20"
-                        >
-                          <BrainCircuit size={12} />
-                          Análisis
-                        </button>
-                      </div>
-                    </div>
+                    <PortfolioCard
+                      key={p.id}
+                      variant="compact"
+                      rank={index + 1}
+                      portfolio={p}
+                      onOpenChart={() => setSelectedChartPortfolio(p)}
+                      onOpenAnalysis={() => setSelectedPortfolio(p)}
+                    />
                   ))}
                 </div>
               </div>
