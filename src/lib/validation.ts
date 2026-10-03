@@ -24,6 +24,19 @@ export interface Portfolio {
   };
 }
 
+export function validatePortfolioName(name: unknown): { valid: boolean; error?: string } {
+  if (typeof name !== 'string' || name.trim() === '') {
+    return { valid: false, error: 'Invalid name' };
+  }
+  if (name.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `Name exceeds max length of ${MAX_NAME_LENGTH}` };
+  }
+  if (!SAFE_TEXT_REGEX.test(name)) {
+    return { valid: false, error: 'Name contains invalid characters' };
+  }
+  return { valid: true };
+}
+
 export function validatePortfolio(data: unknown): { valid: boolean; error?: string } {
   if (!data || typeof data !== 'object') {
     return { valid: false, error: 'Invalid portfolio data: must be an object' };
@@ -38,14 +51,9 @@ export function validatePortfolio(data: unknown): { valid: boolean; error?: stri
     }
   }
 
-  if (typeof obj.name !== 'string' || obj.name.trim() === '') {
-    return { valid: false, error: 'Invalid name' };
-  }
-  if (obj.name.length > MAX_NAME_LENGTH) {
-    return { valid: false, error: `Name exceeds max length of ${MAX_NAME_LENGTH}` };
-  }
-  if (!SAFE_TEXT_REGEX.test(obj.name)) {
-    return { valid: false, error: 'Name contains invalid characters' };
+  const nameValidation = validatePortfolioName(obj.name);
+  if (!nameValidation.valid) {
+    return nameValidation;
   }
 
   // Basic type checks

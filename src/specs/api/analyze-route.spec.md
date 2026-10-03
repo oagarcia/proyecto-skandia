@@ -2,7 +2,7 @@
 
 **Archivo:** `src/app/api/analyze/route.ts`
 **Creada:** 2026-04-14
-**Última revisión:** 2026-04-14
+**Última revisión:** 2026-10-03
 **Estado:** ACTIVE
 
 ## Propósito
@@ -42,7 +42,7 @@ Endpoint principal de análisis. Recibe un portafolio, una API Key de Gemini y u
 
 | Status | Condición | Body |
 |--------|-----------|------|
-| 200 | Éxito | `{ success: true, analysis: string (markdown) }` |
+| 200 | Éxito | `{ success: true, analysis: string (markdown), modelUsed: string, pdfUrl: string \| null }` |
 | 400 | Validación fallida | `{ success: false, error: string }` |
 | 429 | Rate limit | `{ success: false, error: "Too many requests..." }` |
 | 500 | Error interno | `{ success: false, error: "Internal server error" }` |
@@ -50,6 +50,8 @@ Endpoint principal de análisis. Recibe un portafolio, una API Key de Gemini y u
 **Fetching paralelo (Fase 7 del flujo):**
 - MUST iniciar `getPortfolioPdf()` y Yahoo Finance en paralelo (`Promise.all`)
 - SHOULD continuar aunque alguno falle (los datos son opcionales para el análisis)
+- `getPortfolioPdf()` ya no usa el browser compartido (descarga solo por HTTP, ver `pdf-scraper.spec.md`); el browser compartido se usa para Yahoo Finance y Google News
+- MUST retornar en `pdfUrl` el PDF embebido como `data:` URL construido con `buildPdfDataUrl` (`src/lib/portfolio-pdf-link.ts`), o `null` si no se obtuvo el PDF
 
 **Lógica de noticias (Google News):**
 - Extrae holdings del PDF → genera queries de noticias por holding
@@ -94,6 +96,7 @@ El análisis Gemini MUST generar secciones: Resumen, Rentabilidad, Perfil de Rie
 | `getPortfolioPdf` | COVERED (input validation via pdf-scraper.test.ts) |
 | `searchGoogleNews` | COVERED (input validation via news-scraper.test.ts) |
 | `extractHoldingsFromPdf` | COVERED (via pdf-parser.test.ts) |
+| `buildPdfDataUrl` | COVERED (via portfolio-pdf-link.test.ts) |
 
 ---
 
@@ -102,3 +105,12 @@ El análisis Gemini MUST generar secciones: Resumen, Rentabilidad, Perfil de Rie
 <!-- GAP: El comentario en el código dice "5 requests per minute" pero el código implementa 20. El comentario está desactualizado. -->
 <!-- GAP: No hay timeout para la llamada a Gemini. Si el modelo tarda demasiado, la request puede colgar. -->
 <!-- GAP: El fallback de modelo (iterar allowedModels) puede causar latencia significativa si varios modelos retornan 429 de Google. -->
+
+---
+
+## Historial de cambios
+
+| Fecha | Cambio |
+|-------|--------|
+| 2026-04-14 | Spec inicial creada |
+| 2026-10-03 | Se documenta `pdfUrl` (data URL vía `buildPdfDataUrl`) y `modelUsed` en la respuesta 200; `getPortfolioPdf` ya no recibe el browser compartido |

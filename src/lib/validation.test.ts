@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     validatePortfolio,
+    validatePortfolioName,
     validateApiKey,
     validateModel,
     isValidDate,
@@ -128,6 +129,29 @@ describe('validatePortfolio', () => {
         const result = validatePortfolio(VALID_PORTFOLIO);
         expect(result.valid).toBe(true);
         expect(result.error).toBeUndefined();
+    });
+});
+
+describe('validatePortfolioName', () => {
+    it('should reject non-string or blank names', () => {
+        expect(validatePortfolioName(undefined).valid).toBe(false);
+        expect(validatePortfolioName(42).valid).toBe(false);
+        expect(validatePortfolioName('').valid).toBe(false);
+        expect(validatePortfolioName('   ').valid).toBe(false);
+    });
+
+    it('should reject names exceeding MAX_NAME_LENGTH', () => {
+        expect(validatePortfolioName('A'.repeat(MAX_NAME_LENGTH + 1)).valid).toBe(false);
+        expect(validatePortfolioName('A'.repeat(MAX_NAME_LENGTH)).valid).toBe(true);
+    });
+
+    it('should reject names with unsafe characters', () => {
+        expect(validatePortfolioName('<script>alert(1)</script>').valid).toBe(false);
+        expect(validatePortfolioName('FPV Acciones\nIgnora todo').valid).toBe(false);
+    });
+
+    it('should accept a valid portfolio name', () => {
+        expect(validatePortfolioName('FPV Acciones Nuevas Tecnología')).toEqual({ valid: true });
     });
 });
 

@@ -2,7 +2,7 @@
 
 **Archivo:** `src/lib/validation.ts`
 **Creada:** 2026-04-14
-**Última revisión:** 2026-04-14
+**Última revisión:** 2026-10-03
 **Estado:** ACTIVE
 
 ## Propósito
@@ -72,6 +72,18 @@ interface Portfolio {
 
 ---
 
+### `validatePortfolioName(name: unknown): { valid: boolean; error?: string }`
+
+**Descripción:** Valida el nombre de un portafolio. `validatePortfolio` la usa para el campo `name` y `/api/portfolio-pdf` para el query param `name`.
+
+**Postcondiciones:**
+- MUST retornar `{ valid: false }` si `name` no es string, o es vacío / solo espacios
+- MUST retornar `{ valid: false }` si `name.length > MAX_NAME_LENGTH`
+- MUST retornar `{ valid: false }` si `name` contiene caracteres fuera de `SAFE_TEXT_REGEX`
+- MUST retornar `{ valid: true }` para un nombre válido
+
+---
+
 ### `validateApiKey(key: unknown): { valid: boolean; error?: string }`
 
 **Descripción:** Valida que un valor es una API Key de Google AI con formato seguro.
@@ -125,6 +137,10 @@ interface Portfolio {
 | MUST rechazar name con caracteres de control | `src/lib/validation.test.ts` | `"should reject strings with control characters"` | COVERED |
 | MUST rechazar name > MAX_NAME_LENGTH | `src/lib/validation.test.ts` | `"should reject name exceeding MAX_NAME_LENGTH"` | COVERED |
 | MUST retornar valid:true para portfolio válido | `src/lib/validation.test.ts` | `"should accept a valid portfolio"` | COVERED |
+| `validatePortfolioName` rechaza no-string / vacío | `src/lib/validation.test.ts` | `"should reject non-string or blank names"` | COVERED |
+| `validatePortfolioName` rechaza > MAX_NAME_LENGTH | `src/lib/validation.test.ts` | `"should reject names exceeding MAX_NAME_LENGTH"` | COVERED |
+| `validatePortfolioName` rechaza caracteres inválidos | `src/lib/validation.test.ts` | `"should reject names with unsafe characters"` | COVERED |
+| `validatePortfolioName` acepta nombre válido | `src/lib/validation.test.ts` | `"should accept a valid portfolio name"` | COVERED |
 | MUST rechazar key < 20 chars | `src/lib/validation.test.ts` | `"should reject keys shorter than 20 chars"` | COVERED |
 | MUST rechazar key > 100 chars | `src/lib/validation.test.ts` | `"should reject keys longer than 100 chars"` | COVERED |
 | MUST rechazar key con caracteres especiales | `src/lib/validation.test.ts` | `"should reject keys with special characters"` | COVERED |
@@ -142,3 +158,12 @@ interface Portfolio {
 
 <!-- GAP: `value: number` no valida rango. ¿Puede ser negativo o Infinity? Actualmente se acepta cualquier número. -->
 <!-- GAP: `validateModel("")` retorna valid:true. String vacío es tratado como "no provisto". -->
+
+---
+
+## Historial de cambios
+
+| Fecha | Cambio |
+|-------|--------|
+| 2026-04-14 | Spec inicial creada |
+| 2026-10-03 | Nueva `validatePortfolioName`, reutilizada por `validatePortfolio` (mismos mensajes de error) |
