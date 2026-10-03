@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, RefreshCw, X, BrainCircuit, AlertTriangle, CheckCircle, FileText, Activity } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -524,6 +524,13 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
   const [chartData, setChartData] = useState<{ Date: string; formattedDate: string; Value: number }[]>([]);
   const [stats, setStats] = useState<{ var: number; label: string } | null>(null);
 
+  // X axis is keyed by the unique raw Date; formattedDate repeats (e.g. "jun 26"),
+  // which made Recharts snap the tooltip to the first point sharing that label.
+  const labelByDate = useMemo(
+    () => new Map(chartData.map((d) => [d.Date, d.formattedDate])),
+    [chartData]
+  );
+
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setMonth(d.getMonth() - 6); // 6 months ago default
@@ -814,7 +821,9 @@ const ChartModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: () 
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
               <XAxis
-                dataKey="formattedDate"
+                dataKey="Date"
+                tickFormatter={(d) => labelByDate.get(d) ?? d}
+                minTickGap={20}
                 stroke="#ffffff40"
                 fontSize={10}
                 tickLine={false}
