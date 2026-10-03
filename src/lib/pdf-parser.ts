@@ -8,13 +8,6 @@ const TYPE_KEYWORDS_REGEX = /\s*(?:Rv\. Internacional|Derivados|Liquidez|Fondo I
 
 export const HOLDINGS_SECTION_MARKER = "Principales inversiones del portafolio";
 
-/**
- * Pure check: whether the PDF text contains the holdings section.
- */
-export function hasHoldingsSection(text: string): boolean {
-    return text.includes(HOLDINGS_SECTION_MARKER);
-}
-
 export function extractHoldingsFromText(text: string): string[] {
     const startMarker = HOLDINGS_SECTION_MARKER;
     const startIndex = text.indexOf(startMarker);
@@ -72,10 +65,18 @@ export async function extractHoldingsFromPdf(pdfBuffer: Buffer): Promise<string[
     }
 }
 
-export async function pdfHasHoldingsSection(pdfBuffer: Buffer): Promise<boolean> {
+/**
+ * Pure check: whether the PDF text has at least one holding row under the holdings section.
+ * The marker alone is not enough — unpublished months ship an empty template that still has the title.
+ */
+export function hasHoldingsData(text: string): boolean {
+    return extractHoldingsFromText(text).length > 0;
+}
+
+export async function pdfHasHoldingsData(pdfBuffer: Buffer): Promise<boolean> {
     try {
         const data = await pdf(pdfBuffer);
-        return hasHoldingsSection(data.text);
+        return hasHoldingsData(data.text);
     } catch (error) {
         console.error('[PDF Parser] Error parsing PDF:', error);
         return false;

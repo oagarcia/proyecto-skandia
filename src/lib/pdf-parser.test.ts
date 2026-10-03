@@ -1,6 +1,6 @@
 // @spec src/specs/lib/pdf-parser.spec.md
 import { describe, it, expect } from 'vitest';
-import { extractHoldingsFromText, hasHoldingsSection, pdfHasHoldingsSection } from './pdf-parser';
+import { extractHoldingsFromText, hasHoldingsData, pdfHasHoldingsData } from './pdf-parser';
 
 // Tests de la lógica pura de parseo de texto (sin I/O de PDF)
 // extractHoldingsFromPdf solo añade la capa de I/O sobre esta función
@@ -72,18 +72,46 @@ describe('extractHoldingsFromText', () => {
     });
 });
 
-describe('hasHoldingsSection', () => {
-    it('should return true when the section marker is present', () => {
-        expect(hasHoldingsSection(makePdfText(['Some Fund Rv. Internacional 10.00%']))).toBe(true);
+// Texto real extraído de una ficha sin publicar (plantilla vacía: tiene el título pero no filas)
+const EMPTY_TEMPLATE_TEXT = [
+    'Distribución del Portafolio5',
+    SECTION_HEADER,
+    'EmisorParticipación',
+    'Revisor Fiscal del Fondo de Pensiones Voluntarias',
+    'Hoja de vida del administrador',
+    'Empresas vinculadas y relacionadas con la administrado',
+    '6',
+    '7',
+    'Otros fondos a su cargo',
+    'Mail',
+].join('\n');
+
+// Texto real extraído de una ficha publicada
+const PUBLISHED_TEXT = [
+    SECTION_HEADER,
+    'EmisoresTipo de InversionSector Económico% del Portafolio',
+    'Grupo Cibest S AAcciones ColombiaFinanciero Local93.50%',
+    'Banco Gnb Sudameris S.A.LiquidezFinanciero Local6.18%',
+    'Bancolombia S.A.LiquidezFinanciero Local0.26%',
+    'Información adicional del portafolio y el FVP',
+].join('\n');
+
+describe('hasHoldingsData', () => {
+    it('should return true when the section has at least one holding row', () => {
+        expect(hasHoldingsData(PUBLISHED_TEXT)).toBe(true);
+    });
+
+    it('should return false when the section marker is present but has no holding rows', () => {
+        expect(hasHoldingsData(EMPTY_TEMPLATE_TEXT)).toBe(false);
     });
 
     it('should return false when the section marker is missing', () => {
-        expect(hasHoldingsSection('Ficha Técnica del Portafolio\nSin inversiones publicadas')).toBe(false);
+        expect(hasHoldingsData('Ficha Técnica del Portafolio\nSin inversiones publicadas')).toBe(false);
     });
 });
 
-describe('pdfHasHoldingsSection', () => {
+describe('pdfHasHoldingsData', () => {
     it('should return false on parse error without throwing', async () => {
-        await expect(pdfHasHoldingsSection(Buffer.from('not a pdf'))).resolves.toBe(false);
+        await expect(pdfHasHoldingsData(Buffer.from('not a pdf'))).resolves.toBe(false);
     });
 });

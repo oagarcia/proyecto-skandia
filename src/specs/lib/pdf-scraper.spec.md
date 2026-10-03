@@ -2,7 +2,7 @@
 
 **Archivo:** `src/lib/pdf-scraper.ts`
 **Creada:** 2026-04-14
-**Última revisión:** 2026-04-14
+**Última revisión:** 2026-10-03
 **Estado:** ACTIVE
 
 ## Propósito
@@ -12,7 +12,7 @@ Descarga la ficha técnica en PDF de un portafolio Skandia específico. Navega c
 ## Dependencias
 
 - `./browser` — factory de Puppeteer Browser
-- `./pdf-parser` — `pdfHasHoldingsSection` para validar el PDF del período más reciente
+- `./pdf-parser` — `pdfHasHoldingsData` para validar el PDF del período más reciente
 - `puppeteer-core` — tipos de Browser
 
 ---
@@ -40,8 +40,8 @@ Descarga la ficha técnica en PDF de un portafolio Skandia específico. Navega c
 
 *Selección de período:*
 - MUST intentar primero el período `'0'` (mes más reciente)
-- MUST usar el PDF del período `'0'` solo si su texto contiene "Principales inversiones del portafolio"
-- MUST caer al período `'1'` (mes anterior) si el PDF del período `'0'` no contiene esa sección, o si su descarga falla (status no OK, timeout, respuesta que no es PDF)
+- MUST usar el PDF del período `'0'` solo si contiene al menos un holding extraíble en "Principales inversiones del portafolio" (`pdfHasHoldingsData`); el título por sí solo no basta, porque los meses sin publicar traen una plantilla vacía
+- MUST caer al período `'1'` (mes anterior) si el PDF del período `'0'` no tiene holdings, o si su descarga falla (status no OK, timeout, respuesta que no es PDF)
 
 *Descarga:*
 - MUST construir la URL del PDF usando `URLSearchParams` (no concatenación de strings)
@@ -81,3 +81,12 @@ Descarga la ficha técnica en PDF de un portafolio Skandia específico. Navega c
 <!-- GAP: Los valores de período ('0' = mes actual, '1' = mes anterior) están hardcodeados. Si Skandia cambia su semántica, la selección fallará silenciosamente. -->
 <!-- GAP: Cuando el período '0' no es usable se hacen dos descargas por análisis. -->
 <!-- GAP: `page.waitForSelector('div[id^="numberOfRow"]', { timeout: 10000 })` puede fallar si el portal Skandia tarda más de 10 segundos. No hay retry logic. -->
+
+---
+
+## Historial de cambios
+
+| Fecha | Cambio |
+|-------|--------|
+| 2026-04-14 | Spec inicial creada |
+| 2026-10-03 | Selección de período: el período `'0'` se valida con `pdfHasHoldingsData` (al menos un holding) en lugar de solo la presencia del título de la sección |
