@@ -7,6 +7,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import { aiSettings } from '@/config/ai-settings';
+import { buildPortfolioPdfEndpointUrl, getPdfFileName } from '@/lib/portfolio-pdf-link';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 function sanitizeUrl(url: string | undefined): string {
@@ -27,7 +28,8 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-function downloadPdfDataUrl(pdfUrl: string, portfolioName: string) {
+// Downloads an embedded data: URL, or opens any other URL (e.g. /api/portfolio-pdf) in a new tab.
+function openPortfolioPdf(pdfUrl: string, portfolioName: string) {
   if (pdfUrl.startsWith('data:')) {
     const parts = pdfUrl.split(';base64,');
     const contentType = parts[0].split(':')[1];
@@ -42,7 +44,7 @@ function downloadPdfDataUrl(pdfUrl: string, portfolioName: string) {
 
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.download = `Ficha_Tecnica_${portfolioName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    link.download = getPdfFileName(portfolioName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -190,6 +192,23 @@ const PortfolioCard = ({
         >
           <BrainCircuit size={compact ? 12 : 14} />
           Análisis IA
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            openPortfolioPdf(buildPortfolioPdfEndpointUrl(portfolio.name), portfolio.name);
+          }}
+          title="Abrir ficha técnica (PDF)"
+          aria-label="Abrir ficha técnica (PDF)"
+          className={cn(
+            "bg-sky-500/10 hover:bg-sky-500 text-sky-400 hover:text-black rounded-lg transition-all duration-300 flex items-center justify-center border border-sky-500/20",
+            // Compact cards are too narrow for three labels: icon-only there.
+            compact ? "px-2.5 py-1.5" : "flex-1 py-2 text-xs font-semibold gap-1.5 shadow-sm"
+          )}
+        >
+          <FileText size={compact ? 12 : 14} />
+          {!compact && 'Ficha'}
         </button>
       </div>
     </motion.div>
@@ -372,11 +391,11 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <BrainCircuit className="text-emerald-400 shrink-0" size={20} />
-            <span className="truncate max-w-[200px] sm:max-w-none">Análisis AI: {portfolio.name}</span>
+            <span className="truncate max-w-50 sm:max-w-none">Análisis AI: {portfolio.name}</span>
           </h2>
           {pdfUrl && (
             <button
-              onClick={() => downloadPdfDataUrl(pdfUrl, portfolio.name)}
+              onClick={() => openPortfolioPdf(pdfUrl, portfolio.name)}
               className="text-xs text-emerald-400 hover:text-emerald-300 underline mt-1 block flex items-center gap-1 bg-transparent border-none cursor-pointer p-0"
             >
               <FileText size={12} />

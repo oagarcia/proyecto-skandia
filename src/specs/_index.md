@@ -16,7 +16,8 @@ Estado de cobertura de Specification-Driven Development en el proyecto Skandia I
 | `pdf-parser.ts` | [pdf-parser.spec.md](lib/pdf-parser.spec.md) | ACTIVE | `pdf-parser.test.ts` | 100% |
 | `browser.ts` | [browser.spec.md](lib/browser.spec.md) | ACTIVE | *(integración, sin unit tests)* | N/A |
 | `news-scraper.ts` | [news-scraper.spec.md](lib/news-scraper.spec.md) | ACTIVE | `news-scraper.test.ts` | parcial |
-| `pdf-scraper.ts` | [pdf-scraper.spec.md](lib/pdf-scraper.spec.md) | ACTIVE | `pdf-scraper.test.ts` | parcial |
+| `pdf-scraper.ts` | [pdf-scraper.spec.md](lib/pdf-scraper.spec.md) | ACTIVE | `pdf-scraper.test.ts` | 100% |
+| `portfolio-pdf-link.ts` | [portfolio-pdf-link.spec.md](lib/portfolio-pdf-link.spec.md) | ACTIVE | `portfolio-pdf-link.test.ts` | 100% |
 | `yahoo-finance.ts` | [yahoo-finance.spec.md](lib/yahoo-finance.spec.md) | ACTIVE | `tests/test-ssrf.test.ts` | parcial |
 
 ## API Routes (`src/app/api/`)
@@ -26,6 +27,7 @@ Estado de cobertura de Specification-Driven Development en el proyecto Skandia I
 | `api/analyze/route.ts` | [analyze-route.spec.md](api/analyze-route.spec.md) | ACTIVE | *(requiere Next.js runtime)* |
 | `api/skandia/route.ts` | [skandia-route.spec.md](api/skandia-route.spec.md) | ACTIVE | *(requiere Next.js runtime)* |
 | `api/models/route.ts` | [models-route.spec.md](api/models-route.spec.md) | ACTIVE | *(requiere Next.js runtime)* |
+| `api/portfolio-pdf/route.ts` | [portfolio-pdf-route.spec.md](api/portfolio-pdf-route.spec.md) | ACTIVE | `route.test.ts` |
 
 ## Configuración (`src/config/`)
 

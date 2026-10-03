@@ -3,6 +3,7 @@ import { Browser } from 'puppeteer-core';
 import { getBrowser } from '@/lib/browser';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { getPortfolioPdf } from '@/lib/pdf-scraper';
+import { buildPdfDataUrl } from '@/lib/portfolio-pdf-link';
 import { searchGoogleNews } from '@/lib/news-scraper';
 import { extractHoldingsFromPdf } from '@/lib/pdf-parser';
 import { yahooFinanceResearchConfig } from '@/config/yahoo-finance-settings';
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
         // --- PARALLEL FETCHING START ---
         // 1. Start Fetching PDF (Ficha Técnica)
         console.log(`[Analysis] Fetching PDF for ${portfolio.name}...`);
-        const pdfPromise = getPortfolioPdf(portfolio.name, browser || undefined);
+        const pdfPromise = getPortfolioPdf(portfolio.name);
 
         // 2. Start Yahoo Finance Research if configured
         let yahooPromise: Promise<string> | null = null;
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
 
         // --- AWAIT RESULTS ---
         // We await the PDF result first as it might be needed for fallback logic
-        const { pdfBase64, pdfUrl } = await pdfPromise;
+        const { pdfBase64 } = await pdfPromise;
 
         let newsContext = "";
         let newsSourceLabel = "CONTEXTO DE NOTICIAS RECIENTES (Obtenido vía Google News)";
@@ -249,7 +250,7 @@ Rentabilidades:
                 success: true,
                 analysis: winner.text,
                 modelUsed: winner.modelName,
-                pdfUrl: pdfBase64 ? `data:application/pdf;base64,${pdfBase64}` : null // base64 embeded pdf
+                pdfUrl: pdfBase64 ? buildPdfDataUrl(pdfBase64) : null // base64 embeded pdf
             });
 
         } catch (error: unknown) {
