@@ -1,6 +1,6 @@
 import { Browser } from 'puppeteer-core';
 import { getBrowser } from './browser';
-import { pdfHasHoldingsSection } from './pdf-parser';
+import { pdfHasHoldingsData } from './pdf-parser';
 
 export async function getPortfolioPdf(portfolioName: string, browserInstance?: Browser): Promise<{ pdfBase64: string | null, pdfUrl: string | null }> {
     // 🛡️ SENTINEL: Add input length limits to prevent DoS via extremely long portfolio names.
@@ -74,13 +74,13 @@ export async function getPortfolioPdf(portfolioName: string, browserInstance?: B
         const cookies = await page.cookies();
         const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
-        // Prefer the latest month (period 0) only if its holdings section is already published;
+        // Prefer the latest month (period 0) only if its holdings data is already published;
         // otherwise fall back to the previous month (period 1).
         let result = await fetchPdfForPeriod('0', params, cookieHeader);
-        if (result && await pdfHasHoldingsSection(result.buffer)) {
+        if (result && await pdfHasHoldingsData(result.buffer)) {
             console.log('[PDF Scraper] Using latest period (0).');
         } else {
-            console.log('[PDF Scraper] Period 0 missing holdings section, falling back to period 1.');
+            console.log('[PDF Scraper] Period 0 has no holdings data, falling back to period 1.');
             result = await fetchPdfForPeriod('1', params, cookieHeader);
         }
 
