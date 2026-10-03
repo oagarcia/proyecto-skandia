@@ -143,7 +143,7 @@ export async function POST(request: Request) {
         const sanitizedNewsContext = newsContext.replace(/<\/?noticias_externas[^>]*>/gi, '');
 
         let prompt = `
-      Actúa como un analista financiero senior.Analiza el siguiente portafolio de inversión de Skandia Colombia:
+      Actúa como un analista financiero senior. Analiza el siguiente portafolio de inversión de Skandia Colombia:
 
 Nombre: ${portfolio.name}
 Tipo: ${portfolio.type}
