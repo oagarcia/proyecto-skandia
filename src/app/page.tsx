@@ -372,7 +372,7 @@ const AnalysisModal = ({ portfolio, onClose }: { portfolio: Portfolio; onClose: 
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <BrainCircuit className="text-emerald-400 shrink-0" size={20} />
-            <span className="truncate max-w-[200px] sm:max-w-none">Análisis AI: {portfolio.name}</span>
+            <span className="truncate max-w-50 sm:max-w-none">Análisis AI: {portfolio.name}</span>
           </h2>
           {pdfUrl && (
             <button
